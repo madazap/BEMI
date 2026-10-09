@@ -1,0 +1,134 @@
+<div class="patient-card" style="margin-bottom:20px">
+  <div class="patient-card-header">
+    <div>
+      <p><strong>Paciente:</strong> <a href="/pacientes/<%= quotationData.patient_id %>"><%= quotationData.patient_name %></a></p>
+      <p><strong>Fecha:</strong> <%= new Date(quotationData.created_at).toLocaleDateString('es-CO') %></p>
+      <p><strong>Creada por:</strong> <%= quotationData.created_by_name %></p>
+      <% if (quotationData.notes) { %><p><strong>Notas:</strong> <%= quotationData.notes %></p><% } %>
+    </div>
+    <span class="badge quote-status-<%= quotationData.status %>" style="font-size:14px"><%= quotationData.status %></span>
+  </div>
+</div>
+
+<div class="table-wrapper" style="margin-bottom:20px">
+  <table class="table">
+    <thead>
+      <tr><th>Tipo</th><th>Descripción</th><th>Cant.</th><th>Precio Unit.</th><th>Descuento</th><th>Subtotal</th></tr>
+    </thead>
+    <tbody>
+      <% quotationData.items.forEach(item => {
+           const lineSub  = item.quantity * item.unit_price;
+           const lineDisc = item.discount_type === 'porcentaje' ? lineSub * item.discount_value / 100
+                          : item.discount_type === 'valor_fijo' ? Number(item.discount_value) : 0;
+           const lineNet  = lineSub - lineDisc;
+      %>
+        <tr>
+          <td><span class="badge badge-inactive" style="text-transform:none"><%= item.item_type %></span></td>
+          <td>
+            <%= item.description %>
+            <% if (item.plan_id) { %>
+              <a href="/planes/<%= item.plan_id %>" class="badge <%= item.plan_sessions_done >= item.plan_sessions_total ? 'badge-active' : 'badge-type' %>"
+                 style="margin-left:8px;font-size:10px;text-decoration:none">
+                Plan: <%= item.plan_sessions_done %>/<%= item.plan_sessions_total %> sesiones realizadas →
+              </a>
+            <% } %>
+          </td>
+          <td><%= item.quantity %></td>
+          <td>$<%= Number(item.unit_price).toLocaleString('es-CO') %></td>
+          <td><%= lineDisc > 0 ? '-$' + lineDisc.toLocaleString('es-CO') : '—' %></td>
+          <td>$<%= lineNet.toLocaleString('es-CO') %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+    <tfoot>
+      <% const subtotal = quotationData.items.reduce((acc, it) => {
+           const ls = it.quantity * it.unit_price;
+           const ld = it.discount_type === 'porcentaje' ? ls * it.discount_value / 100 : it.discount_type === 'valor_fijo' ? Number(it.discount_value) : 0;
+           return acc + (ls - ld);
+         }, 0);
+         const gDisc = quotationData.discount_type === 'porcentaje' ? subtotal * quotationData.discount_value / 100
+                     : quotationData.discount_type === 'valor_fijo' ? Number(quotationData.discount_value) : 0;
+      %>
+      <% if (gDisc > 0) { %>
+        <tr><td colspan="5" style="text-align:right">Descuento global</td><td>-$<%= gDisc.toLocaleString('es-CO') %></td></tr>
+      <% } %>
+      <tr class="total-row"><td colspan="5" style="text-align:right">TOTAL</td><td>$<%= Number(quotationData.total).toLocaleString('es-CO') %></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+  <a href="/cotizaciones" class="btn">← Volver</a>
+  <% if (quotationData.status === 'borrador') { %>
+    <a href="/cotizaciones/<%= quotationData.id %>/editar" class="btn">Editar</a>
+    <form action="/cotizaciones/<%= quotationData.id %>/enviar" method="POST" style="display:inline">
+      <button class="btn btn-primary">Enviar</button>
+    </form>
+    <form action="/cotizaciones/<%= quotationData.id %>/rechazar" method="POST" style="display:inline">
+      <button class="btn btn-danger" onclick="return confirm('¿Rechazar esta cotización?')">Rechazar</button>
+    </form>
+  <% } else if (quotationData.status === 'enviada') { %>
+    <div style="width:100%;padding:10px 14px;background:#eef3f0;border-left:3px solid #5F816F;border-radius:0 6px 6px 0;font-size:13px;color:#4a6657;margin-bottom:4px">
+      <strong>¿El paciente no acepta todos los ítems o pide otro descuento?</strong>
+      Hacé clic en <em>Editar</em>, eliminá las líneas no aceptadas con ✕ y/o ajustá los descuentos, y luego aprobá. Solo lo que quede en la cotización pasará a la factura.
+    </div>
+    <a href="/cotizaciones/<%= quotationData.id %>/editar" class="btn">Editar</a>
+    <% if (session.roles.includes('admin')) { %>
+      <button type="button" class="btn btn-success" onclick="document.getElementById('approveModal').showModal()">Aprobar</button>
+    <% } %>
+    <form action="/cotizaciones/<%= quotationData.id %>/reabrir" method="POST" style="display:inline">
+      <button class="btn">Reabrir</button>
+    </form>
+    <form action="/cotizaciones/<%= quotationData.id %>/rechazar" method="POST" style="display:inline">
+      <button class="btn btn-danger" onclick="return confirm('¿Rechazar?')">Rechazar</button>
+    </form>
+  <% } else if (quotationData.status === 'aprobada') { %>
+    <a href="/cotizaciones/<%= quotationData.id %>/imprimir" class="btn" target="_blank">Imprimir</a>
+    <a href="/facturas/nueva?quotation_id=<%= quotationData.id %>" class="btn btn-primary">Crear Factura →</a>
+  <% } else if (quotationData.status === 'facturada') { %>
+    <a href="/cotizaciones/<%= quotationData.id %>/imprimir" class="btn" target="_blank">Imprimir</a>
+    <a href="/facturas/<%= quotationData.invoice_id %>" class="btn btn-primary">Ver Factura →</a>
+  <% } else if (quotationData.status === 'rechazada') { %>
+    <form action="/cotizaciones/<%= quotationData.id %>/reabrir" method="POST" style="display:inline">
+      <button class="btn">Reabrir como borrador</button>
+    </form>
+  <% } %>
+</div>
+
+<% if (quotationData.status === 'enviada' && session.roles.includes('admin')) {
+     const planItems = quotationData.items.filter(it => it.sessions_to_create);
+     const totalSessions = planItems.reduce((a, it) => a + it.sessions_to_create, 0);
+%>
+<dialog class="modal modal-sm" id="approveModal">
+  <div class="modal-header">
+    <h4>Aprobar cotización #<%= quotationData.id %></h4>
+    <button type="button" class="modal-close" onclick="this.closest('dialog').close()" aria-label="Cerrar">✕</button>
+  </div>
+  <% if (planItems.length) { %>
+    <p>Esta aprobación creará para <strong><%= quotationData.patient_name %></strong> los siguientes planes de tratamiento, con sus sesiones en estado <em>pendiente</em>, listas para agendar y realizar:</p>
+    <div class="table-wrapper">
+      <table class="table">
+        <thead><tr><th>Tratamiento</th><th style="text-align:right">Sesiones</th></tr></thead>
+        <tbody>
+          <% planItems.forEach(it => { %>
+            <tr>
+              <td><%= it.treatment_name || it.description %>
+                <% if (Number(it.quantity) !== 1) { %><small class="text-muted">(<%= it.treatment_total_sessions %> × <%= Number(it.quantity) %>)</small><% } %>
+              </td>
+              <td style="text-align:right"><%= it.sessions_to_create %><% if (it.requires_control) { %> + control<% } %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+        <tfoot><tr class="total-row"><td style="text-align:right">Total</td><td style="text-align:right"><%= totalSessions %></td></tr></tfoot>
+      </table>
+    </div>
+    <p class="text-muted">Los insumos no se descuentan ahora: se consumen del inventario cuando cada sesión se marque como <strong>realizada</strong>. Una vez aprobada, la cotización ya no se puede reabrir ni rechazar.</p>
+  <% } else { %>
+    <p>Esta cotización no tiene líneas de tratamiento, así que no se crearán planes ni sesiones. Una vez aprobada, ya no se puede reabrir ni rechazar.</p>
+  <% } %>
+  <form action="/cotizaciones/<%= quotationData.id %>/aprobar" method="POST" class="modal-footer" style="gap:8px">
+    <button type="button" class="btn" onclick="this.closest('dialog').close()">Cancelar</button>
+    <button type="submit" class="btn btn-success">Aceptar y aprobar</button>
+  </form>
+</dialog>
+<% } %>

@@ -1,0 +1,47 @@
+<div class="page-actions">
+  <a href="/tarifas/nueva" class="btn btn-primary">+ Nueva Tarifa</a>
+</div>
+
+<div class="section-block">
+  <h3>Tarifas Vigentes</h3>
+  <div class="table-wrapper" style="margin-top:12px">
+    <table class="table">
+      <thead>
+        <tr><th>Tipo de Servicio</th><th>Tarifa / hora</th><th>Vigente desde</th></tr>
+      </thead>
+      <tbody>
+        <% if (current.length === 0) { %>
+          <tr><td colspan="3" class="text-center">No hay tarifas vigentes.</td></tr>
+        <% } %>
+        <% current.forEach(r => { %>
+          <tr>
+            <td><%= TREATMENT_TYPES[r.service_type] || r.service_type %></td>
+            <td>$<%= Number(r.hourly_rate).toLocaleString('es-CO') %></td>
+            <td><%= new Date(r.effective_from).toLocaleDateString('es-CO') %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section-block" style="margin-top:24px">
+  <h3>Historial de Tarifas</h3>
+  <div class="table-wrapper" style="margin-top:12px">
+    <table class="table">
+      <thead>
+        <tr><th>Tipo</th><th>Tarifa / hora</th><th>Desde</th><th>Hasta</th></tr>
+      </thead>
+      <tbody>
+        <% all.forEach(r => { %>
+          <tr class="<%= r.effective_to ? 'row-inactive' : '' %>">
+            <td><%= TREATMENT_TYPES[r.service_type] || r.service_type %></td>
+            <td>$<%= Number(r.hourly_rate).toLocaleString('es-CO') %></td>
+            <td><%= new Date(r.effective_from).toLocaleDateString('es-CO') %></td>
+            <td><%= r.effective_to ? new Date(r.effective_to).toLocaleDateString('es-CO') : '<span class="badge badge-active">Vigente</span>' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,43 @@
+<div class="page-actions">
+  <a href="/usuarios/nuevo" class="btn btn-primary">+ Nuevo Usuario</a>
+</div>
+
+<div class="table-wrapper">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Email</th>
+        <th>Roles</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (users.length === 0) { %>
+        <tr><td colspan="5" class="text-center">No hay usuarios registrados.</td></tr>
+      <% } %>
+      <% users.forEach(u => { %>
+        <tr class="<%= u.is_active ? '' : 'row-inactive' %>">
+          <td><%= u.name %></td>
+          <td><%= u.email %></td>
+          <td><%= u.roles || '—' %></td>
+          <td>
+            <span class="badge <%= u.is_active ? 'badge-active' : 'badge-inactive' %>">
+              <%= u.is_active ? 'Activo' : 'Inactivo' %>
+            </span>
+          </td>
+          <td class="actions">
+            <a href="/usuarios/<%= u.id %>/editar" class="btn btn-sm">Editar</a>
+            <form action="/usuarios/<%= u.id %>/toggle-activo" method="POST" style="display:inline">
+              <button type="submit" class="btn btn-sm <%= u.is_active ? 'btn-danger' : 'btn-success' %>"
+                      onclick="return confirm('<%= u.is_active ? 'Desactivar' : 'Activar' %> este usuario?')">
+                <%= u.is_active ? 'Desactivar' : 'Activar' %>
+              </button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,135 @@
+<%
+  // Conserva los filtros actuales al cambiar solo el segmento desde los contadores
+  const qs = (overrides = {}) => {
+    const base = {
+      segment: filters.segment,
+      q:       filters.q,
+      type:    filters.treatmentType,
+      from:    filters.from,
+      to:      filters.to,
+      sort:    filters.sort === 'nombre' ? '' : filters.sort
+    };
+    const merged = Object.assign({}, base, overrides);
+    const parts = Object.keys(merged)
+      .filter(k => merged[k] !== '' && merged[k] !== null && merged[k] !== undefined)
+      .map(k => k + '=' + encodeURIComponent(merged[k]));
+    return '/pacientes' + (parts.length ? '?' + parts.join('&') : '');
+  };
+  const tiles = [
+    { key: '',                   label: 'Todos',                count: stats.total },
+    { key: 'activos',            label: 'Con tratamiento activo', count: stats.activos },
+    { key: 'sin_tratamiento',    label: 'Sin tratamiento activo', count: stats.sin_tratamiento },
+    { key: 'por_agendar',        label: 'Sesiones por agendar', count: stats.por_agendar },
+    { key: 'saldo',              label: 'Con saldo pendiente',  count: stats.saldo },
+    { key: 'cotizacion_abierta', label: 'Cotización abierta',   count: stats.cotizacion_abierta },
+    { key: 'nuevos',             label: 'Nuevos (30 días)',     count: stats.nuevos }
+  ];
+  const segmentLabel = (tiles.find(t => t.key === filters.segment) || tiles[0]).label;
+  const money = n => '$' + Number(n || 0).toLocaleString('es-CO');
+%>
+
+<div class="page-actions" style="justify-content:flex-end">
+  <a href="/pacientes/nuevo" class="btn btn-primary">+ Nuevo Paciente</a>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+  <% tiles.forEach(t => { %>
+    <a href="<%= qs({ segment: t.key }) %>"
+       style="text-decoration:none;padding:8px 14px;border-radius:8px;border:1px solid <%= filters.segment === t.key ? '#1a56db' : '#e2e4e0' %>;background:<%= filters.segment === t.key ? '#eef3ff' : '#fff' %>;min-width:92px">
+      <span style="display:block;font-size:12px;color:#7a7d78"><%= t.label %></span>
+      <strong style="font-size:18px"><%= t.count %></strong>
+    </a>
+  <% }) %>
+</div>
+
+<form method="GET" action="/pacientes" class="filter-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:20px">
+  <div>
+    <label class="form-label">Segmento</label>
+    <select name="segment" class="form-control" style="width:210px">
+      <% tiles.forEach(t => { %>
+        <option value="<%= t.key %>" <%= filters.segment === t.key ? 'selected' : '' %>><%= t.key ? t.label : '— Todos —' %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Buscar</label>
+    <input type="text" name="q" value="<%= filters.q %>" class="form-control" style="width:250px" placeholder="Nombre, documento, celular o email…">
+  </div>
+  <div>
+    <label class="form-label">Tipo de tratamiento activo</label>
+    <select name="type" class="form-control" style="width:200px">
+      <option value="">— Cualquiera —</option>
+      <% Object.entries(TREATMENT_TYPES).forEach(([val, lbl]) => { %>
+        <option value="<%= val %>" <%= filters.treatmentType === val ? 'selected' : '' %>><%= lbl %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Registrado desde</label>
+    <input type="date" name="from" value="<%= filters.from %>" class="form-control" style="width:145px">
+  </div>
+  <div>
+    <label class="form-label">Hasta</label>
+    <input type="date" name="to" value="<%= filters.to %>" class="form-control" style="width:145px">
+  </div>
+  <div>
+    <label class="form-label">Orden</label>
+    <select name="sort" class="form-control" style="width:175px">
+      <option value="nombre"    <%= filters.sort === 'nombre'    ? 'selected' : '' %>>Nombre (A–Z)</option>
+      <option value="recientes" <%= filters.sort === 'recientes' ? 'selected' : '' %>>Registro más reciente</option>
+      <option value="antiguos"  <%= filters.sort === 'antiguos'  ? 'selected' : '' %>>Registro más antiguo</option>
+      <option value="saldo"     <%= filters.sort === 'saldo'     ? 'selected' : '' %>>Mayor saldo pendiente</option>
+    </select>
+  </div>
+  <div>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+    <a href="/pacientes" class="btn" style="margin-left:6px">Limpiar</a>
+  </div>
+</form>
+
+<div style="margin-bottom:12px;color:#7a7d78;font-size:13px">
+  <strong><%= patients.length %></strong> paciente(s) encontrado(s)<% if (filters.segment) { %> · <%= segmentLabel %><% } %>
+</div>
+
+<div class="table-wrapper">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Documento</th>
+        <th>Celular</th>
+        <th>Email</th>
+        <th>Trat. activos</th>
+        <th>Sesiones pend.</th>
+        <th>Última sesión</th>
+        <th>Saldo</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (patients.length === 0) { %>
+        <tr><td colspan="9" class="text-center">No hay pacientes con estos filtros.</td></tr>
+      <% } %>
+      <% patients.forEach(p => { const balance = Number(p.balance); %>
+        <tr>
+          <td><strong><%= p.full_name %></strong></td>
+          <td><%= p.document_type %> <%= p.document_number %></td>
+          <td><%= p.phone || '—' %></td>
+          <td><%= p.email || '—' %></td>
+          <td><%= p.active_treatments %></td>
+          <td><%= p.pending_sessions %></td>
+          <td><%= p.last_session ? new Date(p.last_session).toLocaleDateString('es-CO') : '—' %></td>
+          <td>
+            <% if (balance > 0) { %>
+              <span class="badge badge-warning"><%= money(balance) %></span>
+            <% } else { %>—<% } %>
+          </td>
+          <td class="actions">
+            <a href="/pacientes/<%= p.id %>" class="btn btn-sm">Ver ficha</a>
+            <a href="/pacientes/<%= p.id %>/editar" class="btn btn-sm">Editar</a>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

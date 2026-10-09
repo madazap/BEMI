@@ -1,0 +1,137 @@
+<%
+  const qs = (overrides = {}) => {
+    const base = {
+      min_age: filters.minAgeDays,
+      search:  filters.search,
+      sort:    filters.sort === 'antiguedad' ? 'antiguedad' : ''
+    };
+    const merged = Object.assign({}, base, overrides);
+    const parts = Object.keys(merged)
+      .filter(k => merged[k] !== '' && merged[k] !== null && merged[k] !== undefined)
+      .map(k => k + '=' + encodeURIComponent(merged[k]));
+    return '/facturas/por-cobrar' + (parts.length ? '?' + parts.join('&') : '');
+  };
+%>
+
+<div class="page-actions" style="justify-content:space-between;align-items:center">
+  <a href="/facturas" class="btn btn-sm">&larr; Volver a Facturación</a>
+  <a href="<%= qs() %>.csv" class="btn btn-sm">Exportar CSV</a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin:16px 0">
+  <div class="form-card" style="max-width:none">
+    <p style="margin:0;color:var(--muted)">Total por cobrar</p>
+    <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:var(--danger, #c0392b)">
+      $<%= summary.total_pending.toLocaleString('es-CO', { maximumFractionDigits: 0 }) %>
+    </p>
+  </div>
+  <div class="form-card" style="max-width:none">
+    <p style="margin:0;color:var(--muted)">Clientes con saldo</p>
+    <p style="margin:6px 0 0;font-size:20px;font-weight:700"><%= summary.patient_count %></p>
+  </div>
+  <div class="form-card" style="max-width:none">
+    <p style="margin:0;color:var(--muted)">Facturas pendientes</p>
+    <p style="margin:6px 0 0;font-size:20px;font-weight:700"><%= summary.invoice_count %></p>
+  </div>
+</div>
+
+<form method="GET" action="/facturas/por-cobrar" class="filter-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:20px">
+  <div>
+    <label class="form-label">Buscar</label>
+    <input type="text" name="search" value="<%= filters.search %>" class="form-control" style="width:220px" placeholder="Nombre o documento del paciente">
+  </div>
+  <div>
+    <label class="form-label">Antigüedad</label>
+    <select name="min_age" class="form-control" style="width:175px">
+      <option value="">— Cualquiera —</option>
+      <option value="7"  <%= filters.minAgeDays == 7  ? 'selected' : '' %>>Más de 7 días</option>
+      <option value="15" <%= filters.minAgeDays == 15 ? 'selected' : '' %>>Más de 15 días</option>
+      <option value="30" <%= filters.minAgeDays == 30 ? 'selected' : '' %>>Más de 30 días</option>
+      <option value="60" <%= filters.minAgeDays == 60 ? 'selected' : '' %>>Más de 60 días</option>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Ordenar por</label>
+    <select name="sort" class="form-control" style="width:195px">
+      <option value="deuda"      <%= filters.sort !== 'antiguedad' ? 'selected' : '' %>>Mayor deuda primero</option>
+      <option value="antiguedad" <%= filters.sort === 'antiguedad' ? 'selected' : '' %>>Más antigua primero</option>
+    </select>
+  </div>
+  <div>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+    <a href="/facturas/por-cobrar" class="btn" style="margin-left:6px">Limpiar</a>
+  </div>
+</form>
+
+<% if (!patients.length) { %>
+  <div class="form-card" style="max-width:none;text-align:center;color:var(--muted)">
+    No hay cuentas por cobrar con estos filtros.
+  </div>
+<% } %>
+
+<% patients.forEach(p => { %>
+  <%
+    const atrasada = p.oldest_days >= 15;
+  %>
+  <div class="form-card" style="max-width:none;margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px">
+      <div>
+        <h3 style="margin:0 0 4px"><%= p.patient_name %></h3>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)">
+          <% if (p.document_number) { %><span><%= p.document_number %></span><% } %>
+          <% if (p.phone) { %>
+            <a href="tel:<%= p.phone.replace(/[^+\d]/g, '') %>">📞 <%= p.phone %></a>
+          <% } else { %>
+            <span style="color:var(--muted)">Sin teléfono registrado</span>
+          <% } %>
+          <% if (p.email) { %>
+            <a href="mailto:<%= p.email %>">✉️ <%= p.email %></a>
+          <% } else { %>
+            <span style="color:var(--muted)">Sin correo registrado</span>
+          <% } %>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <p style="margin:0;color:var(--muted);font-size:13px">Saldo pendiente</p>
+        <p style="margin:2px 0 0;font-size:20px;font-weight:700;color:var(--danger, #c0392b)">
+          $<%= p.total_pending.toLocaleString('es-CO', { maximumFractionDigits: 0 }) %>
+        </p>
+        <% if (atrasada) { %>
+          <span class="badge badge-warning" title="La factura más antigua pendiente tiene <%= p.oldest_days %> días">
+            <%= p.oldest_days %> días sin pagar
+          </span>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr><th>Factura</th><th>Fecha</th><th>Tratamiento</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Días</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+          <% p.invoices.forEach(inv => { %>
+            <tr>
+              <td>#<%= inv.id %></td>
+              <td><%= new Date(inv.created_at).toLocaleDateString('es-CO') %></td>
+              <td><%= inv.treatment_name || '—' %></td>
+              <td>$<%= inv.total_amount.toLocaleString('es-CO') %></td>
+              <td>$<%= inv.total_paid.toLocaleString('es-CO') %></td>
+              <td class="text-danger">$<%= inv.pending.toLocaleString('es-CO') %></td>
+              <td>
+                <% if (inv.days_old >= 15) { %>
+                  <span class="badge badge-warning"><%= inv.days_old %></span>
+                <% } else { %>
+                  <%= inv.days_old %>
+                <% } %>
+              </td>
+              <td class="actions">
+                <a href="/facturas/<%= inv.id %>" class="btn btn-sm">Ver</a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% }) %>

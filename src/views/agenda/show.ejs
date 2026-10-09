@@ -1,0 +1,42 @@
+<div class="patient-card" style="margin-bottom:20px">
+  <div class="patient-card-header">
+    <div>
+      <p>Paciente: <a href="/pacientes/<%= appointmentData.patient_id %>"><strong><%= appointmentData.patient_name %></strong></a></p>
+      <p>Profesional: <strong><%= appointmentData.professional_name %></strong></p>
+      <% if (appointmentData.session_id) { %>
+        <p>Sesión vinculada: <a href="/sesiones/<%= appointmentData.session_id %>"><%= appointmentData.is_control ? 'Control' : 'Sesión #' + appointmentData.session_number %> — <%= appointmentData.treatment_name %></a></p>
+      <% } %>
+    </div>
+    <span class="badge appt-status-<%= appointmentData.status %>" style="font-size:13px"><%= appointmentData.status %></span>
+  </div>
+
+  <div class="two-col" style="margin-top:16px">
+    <div><span class="field-label">Fecha y hora</span><span><%= new Date(appointmentData.scheduled_at).toLocaleString('es-CO') %></span></div>
+    <div><span class="field-label">Duración</span><span><%= appointmentData.duration_minutes %> minutos</span></div>
+  </div>
+  <% if (appointmentData.notes) { %>
+    <div style="margin-top:12px"><span class="field-label">Notas</span><p><%= appointmentData.notes %></p></div>
+  <% } %>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+  <a href="/agenda" class="btn">← Volver</a>
+
+  <% if (appointmentData.status === 'agendada') { %>
+    <form action="/agenda/<%= appointmentData.id %>/confirmar" method="POST" style="display:inline">
+      <button type="submit" class="btn btn-success">Confirmar</button>
+    </form>
+    <a href="/agenda/<%= appointmentData.id %>/editar" class="btn">Editar</a>
+    <form action="/agenda/<%= appointmentData.id %>/cancelar" method="POST" style="display:inline">
+      <button type="submit" class="btn btn-danger" onclick="return confirm('¿Cancelar esta cita?')">Cancelar cita</button>
+    </form>
+  <% } else if (appointmentData.status === 'confirmada') { %>
+    <form action="/agenda/<%= appointmentData.id %>/realizar" method="POST" style="display:inline">
+      <button type="submit" class="btn btn-success">Marcar como Realizada</button>
+    </form>
+    <a href="/agenda/<%= appointmentData.id %>/editar" class="btn">Editar</a>
+    <form action="/agenda/<%= appointmentData.id %>/cancelar" method="POST" style="display:inline">
+      <button type="submit" class="btn btn-danger" onclick="return confirm('¿Cancelar esta cita?')">Cancelar cita</button>
+    </form>
+  <% } %>
+</div>

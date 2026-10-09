@@ -1,0 +1,55 @@
+<form action="/usuarios/<%= user ? user.id : '' %>" method="POST" class="form-card" novalidate>
+  <div class="form-group">
+    <label for="name">Nombre completo</label>
+    <input type="text" id="name" name="name" required
+           value="<%= user ? user.name : '' %>" placeholder="Ej: María López">
+  </div>
+
+  <div class="form-group">
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" required
+           value="<%= user ? user.email : '' %>" placeholder="usuario@ejemplo.com"
+           autocomplete="off">
+  </div>
+
+  <div class="form-group">
+    <label for="password">
+      Contraseña
+      <% if (user) { %><small>(dejar vacío para no cambiar)</small><% } %>
+    </label>
+    <input type="password" id="password" name="password"
+           <%= user ? '' : 'required' %>
+           minlength="6" placeholder="Mínimo 6 caracteres"
+           autocomplete="new-password">
+  </div>
+
+  <div class="form-group">
+    <label>Roles</label>
+    <div class="checkbox-group">
+      <% roles.forEach(r => { %>
+        <label class="checkbox-label">
+          <input type="checkbox" name="roles" value="<%= r.id %>"
+                 <%= selectedRoles.includes(r.id) ? 'checked' : '' %>>
+          <%= r.name %>
+        </label>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <a href="/usuarios" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary">
+      <%= user ? 'Guardar cambios' : 'Crear usuario' %>
+    </button>
+  </div>
+</form>
+
+<% if (user && user.totp_enabled) { %>
+  <form action="/usuarios/<%= user.id %>/2fa/desactivar" method="POST" class="form-card" style="margin-top:16px">
+    <p style="margin-bottom:12px">
+      Este usuario tiene <strong>verificación en dos pasos activada</strong>.
+      Si perdió acceso a su app de autenticación, puedes desactivarla aquí para que pueda volver a configurarla.
+    </p>
+    <button type="submit" class="btn btn-danger">Desactivar 2FA de este usuario</button>
+  </form>
+<% } %>

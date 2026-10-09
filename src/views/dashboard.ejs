@@ -1,0 +1,197 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<div class="period-selector">
+  <form method="GET" action="/dashboard" style="display:flex;gap:10px;align-items:center">
+    <label for="selYear">Período:</label>
+    <select id="selYear" name="year">
+      <% for (let y = new Date().getFullYear(); y >= new Date().getFullYear() - 3; y--) { %>
+        <option value="<%= y %>" <%= y === year ? 'selected' : '' %>><%= y %></option>
+      <% } %>
+    </select>
+    <select id="selMonth" name="month">
+      <% const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+         meses.forEach((mn, i) => { %>
+        <option value="<%= i+1 %>" <%= (i+1) === month ? 'selected' : '' %>><%= mn %></option>
+      <% }); %>
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">Ver</button>
+  </form>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card green">
+    <div class="kpi-label">Ingresos del mes</div>
+    <div class="kpi-value">$<%= revenue.toLocaleString('es-CO') %></div>
+  </div>
+  <div class="kpi-card red">
+    <div class="kpi-label">Gastos totales</div>
+    <div class="kpi-value">$<%= expenses.total.toLocaleString('es-CO') %></div>
+  </div>
+  <div class="kpi-card <%= netMargin >= 0 ? 'blue' : 'red' %>">
+    <div class="kpi-label">Margen neto</div>
+    <div class="kpi-value">$<%= netMargin.toLocaleString('es-CO') %></div>
+  </div>
+  <div class="kpi-card <%= magistrals.month.margin >= 0 ? 'green' : 'red' %>">
+    <div class="kpi-label">Margen magistrales del mes</div>
+    <div class="kpi-value">$<%= Math.round(magistrals.month.margin).toLocaleString('es-CO') %></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">
+      Facturado $<%= Math.round(magistrals.month.revenue).toLocaleString('es-CO') %> · Costo $<%= Math.round(magistrals.month.cost).toLocaleString('es-CO') %>
+    </div>
+  </div>
+  <div class="kpi-card neutral">
+    <div class="kpi-label">Sesiones realizadas</div>
+    <div class="kpi-value"><%= sessionsCount %></div>
+  </div>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-card">
+    <h3>Ingresos últimos 6 meses</h3>
+    <canvas id="revenueChart" height="200"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Métodos de pago del mes</h3>
+    <canvas id="methodsChart" height="200"></canvas>
+  </div>
+</div>
+
+<div class="section-block">
+  <h3>Rentabilidad por Tratamiento <small style="font-weight:400;font-size:13px;color:var(--muted)">(últimos 3 meses)</small></h3>
+  <% if (profitability.length === 0) { %>
+    <p style="color:var(--muted);margin-top:12px">Sin datos de sesiones en este período.</p>
+  <% } else { %>
+  <div class="table-wrapper" style="margin-top:12px">
+    <table class="table">
+      <thead>
+        <tr><th>Tratamiento</th><th>Sesiones</th><th>Margen promedio</th><th>Margen total</th></tr>
+      </thead>
+      <tbody>
+        <% profitability.forEach(p => { %>
+          <tr>
+            <td><%= p.name %></td>
+            <td><%= p.sessions_count %></td>
+            <td class="<%= p.avg_margin >= 0 ? '' : 'text-danger' %>">$<%= Math.round(p.avg_margin).toLocaleString('es-CO') %></td>
+            <td class="<%= p.total_margin >= 0 ? '' : 'text-danger' %>"><strong>$<%= Math.round(p.total_margin).toLocaleString('es-CO') %></strong></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<div class="section-block" id="renovaciones">
+  <h3>Magistrales por renovar <small style="font-weight:400;font-size:13px;color:var(--muted)">(vencidos o a 5 días o menos de terminar)</small></h3>
+  <% if (renewals.length === 0) { %>
+    <p style="color:var(--muted);margin-top:12px">No hay magistrales por renovar.</p>
+  <% } else { %>
+  <div class="table-wrapper" style="margin-top:12px">
+    <table class="table">
+      <thead>
+        <tr><th>Paciente</th><th>Magistral</th><th>Última compra</th><th>Renovación</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% renewals.forEach(r => { const [ry, rm, rd] = r.renewal_date.split('-'); %>
+          <tr>
+            <td><%= r.patient_name %></td>
+            <td><%= r.generic_name %></td>
+            <td><%= new Date(r.last_purchase_at).toLocaleDateString('es-CO') %> · <%= +r.last_quantity %> <%= r.consumption_unit %></td>
+            <td><%= +rd %>/<%= +rm %>/<%= ry %><br><small style="color:var(--muted)"><%= r.days_left < 0 ? 'venció hace ' + (-r.days_left) + ' día(s)' : r.days_left === 0 ? 'vence hoy' : 'en ' + r.days_left + ' día(s)' %></small></td>
+            <td><span class="badge <%= r.status === 'vencida' ? 'badge-danger' : 'badge-warning' %>"><%= r.status === 'vencida' ? 'Vencida' : 'Por renovar' %></span></td>
+            <td><a href="/pacientes/<%= r.patient_id %>#magistrales" class="btn btn-sm">Ver ficha</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<div class="section-block">
+  <h3>Rentabilidad por Magistral <small style="font-weight:400;font-size:13px;color:var(--muted)">(últimos 3 meses · uso interno)</small></h3>
+  <% if (magistrals.byProduct.length === 0) { %>
+    <p style="color:var(--muted);margin-top:12px">Sin magistrales facturados en este período.</p>
+  <% } else { %>
+  <div class="table-wrapper" style="margin-top:12px">
+    <table class="table">
+      <thead>
+        <tr><th>Magistral</th><th>Unidades</th><th>Facturado</th><th>Costo</th><th>Margen</th><th>Margen %</th></tr>
+      </thead>
+      <tbody>
+        <% magistrals.byProduct.forEach(m => { const pct = m.revenue > 0 ? m.margin / m.revenue * 100 : 0; %>
+          <tr>
+            <td><%= m.name %>
+              <% if (m.lines_without_cost) { %><br><span class="badge badge-warning" title="El producto no tenía precio de adquisición al facturar; se tomó costo $0">Sin precio de adquisición</span><% } %>
+            </td>
+            <td><%= +m.units.toFixed(2) %></td>
+            <td>$<%= Math.round(m.revenue).toLocaleString('es-CO') %></td>
+            <td>$<%= Math.round(m.cost).toLocaleString('es-CO') %></td>
+            <td class="<%= m.margin >= 0 ? '' : 'text-danger' %>"><strong>$<%= Math.round(m.margin).toLocaleString('es-CO') %></strong></td>
+            <td><%= pct.toFixed(1) %>%</td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<div class="section-block">
+  <h3>Top 5 Pacientes <small style="font-weight:400;font-size:13px;color:var(--muted)">(año <%= year %>)</small></h3>
+  <% if (topPatients.length === 0) { %>
+    <p style="color:var(--muted);margin-top:12px">Sin datos de pagos en este año.</p>
+  <% } else { %>
+  <div class="table-wrapper" style="margin-top:12px">
+    <table class="table">
+      <thead>
+        <tr><th>#</th><th>Paciente</th><th>Total pagado</th><th>Sesiones</th></tr>
+      </thead>
+      <tbody>
+        <% topPatients.forEach((p, i) => { %>
+          <tr>
+            <td><%= i + 1 %></td>
+            <td><%= p.full_name %></td>
+            <td>$<%= p.total_paid.toLocaleString('es-CO') %></td>
+            <td><%= p.sessions_count %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<script>
+(function () {
+  const revenueData  = <%- JSON.stringify(revenueTrend) %>;
+  const methodsData  = <%- JSON.stringify(paymentMethods) %>;
+
+  const monthLabels = { '01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun','07':'Jul','08':'Ago','09':'Sep','10':'Oct','11':'Nov','12':'Dic' };
+
+  if (revenueData.length) {
+    new Chart(document.getElementById('revenueChart'), {
+      type: 'bar',
+      data: {
+        labels: revenueData.map(d => monthLabels[d.month.split('-')[1]] + ' ' + d.month.split('-')[0]),
+        datasets: [{ label: 'Ingresos', data: revenueData.map(d => d.total),
+          backgroundColor: '#2c7be5', borderRadius: 4 }]
+      },
+      options: { responsive: true, plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-CO') } } } }
+    });
+  }
+
+  if (methodsData.length) {
+    new Chart(document.getElementById('methodsChart'), {
+      type: 'doughnut',
+      data: {
+        labels: methodsData.map(d => d.method),
+        datasets: [{ data: methodsData.map(d => d.total),
+          backgroundColor: ['#2c7be5','#00c853','#e53935','#fb8c00'] }]
+      },
+      options: { responsive: true,
+        plugins: { tooltip: { callbacks: { label: ctx => ' $' + ctx.raw.toLocaleString('es-CO') } } } }
+    });
+  }
+})();
+</script>

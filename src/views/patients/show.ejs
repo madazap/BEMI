@@ -1,0 +1,124 @@
+<div class="patient-card">
+  <div class="patient-card-header">
+    <h2><%= patient.full_name %></h2>
+    <a href="/pacientes/<%= patient.id %>/editar" class="btn btn-sm">Editar</a>
+  </div>
+  <div class="patient-card-body two-col">
+    <div><span class="field-label">Documento</span><span><%= patient.document_type %> <%= patient.document_number %></span></div>
+    <div><span class="field-label">Teléfono</span><span><%= patient.phone || '—' %></span></div>
+    <div><span class="field-label">Email</span><span><%= patient.email || '—' %></span></div>
+    <div><span class="field-label">Dirección</span><span><%= patient.address || '—' %></span></div>
+    <div><span class="field-label">Fecha nacimiento</span><span><%= patient.birth_date ? new Date(patient.birth_date).toLocaleDateString('es-CO') : '—' %></span></div>
+    <div><span class="field-label">Registrado</span><span><%= new Date(patient.created_at).toLocaleDateString('es-CO') %></span></div>
+  </div>
+</div>
+
+<div class="section-block">
+  <div class="section-header">
+    <h3>Tratamientos</h3>
+    <a href="/pacientes/<%= patient.id %>/tratamientos/nuevo" class="btn btn-sm btn-primary">+ Asignar Tratamiento</a>
+  </div>
+  <% if (treatments.length === 0) { %>
+    <p class="text-muted">No hay tratamientos asignados.</p>
+  <% } else { %>
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr><th>Tratamiento</th><th>Tipo</th><th>Progreso</th><th>Plan pago</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+          <% treatments.forEach(t => { %>
+            <tr>
+              <td><%= t.treatment_name %></td>
+              <td><%= TREATMENT_TYPES[t.type] || t.type %></td>
+              <td><%= t.done_sessions %> / <%= t.regular_sessions || t.total_sessions %><% if (Number(t.has_control)) { %> <span class="badge <%= Number(t.control_done) ? 'badge-active' : 'badge-type' %>">+ control</span><% } %></td>
+              <td><%= t.payment_plan === 'paquete' ? 'Paquete' : 'Por sesión' %></td>
+              <td><span class="badge <%= t.status === 'activo' ? 'badge-active' : 'badge-inactive' %>"><%= t.status %></span></td>
+              <td><a href="/planes/<%= t.id %>" class="btn btn-sm">Ver plan</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%
+  const STATUS = {
+    vencida:     { label: 'Vencida',     cls: 'badge-danger' },
+    por_renovar: { label: 'Por renovar', cls: 'badge-warning' },
+    vigente:     { label: 'Vigente',     cls: 'badge-active' },
+    no_renovar:  { label: 'No renovar',  cls: 'badge-inactive' }
+  };
+  const money = n => '$' + Math.round(Number(n || 0)).toLocaleString('es-CO');
+  const fdate = d => new Date(d).toLocaleDateString('es-CO');
+  const fday  = iso => { const [y, m, d] = iso.split('-'); return `${+d}/${+m}/${y}`; };
+%>
+<div class="section-block" id="magistrales">
+  <div class="section-header">
+    <h3>Magistrales adquiridos</h3>
+  </div>
+  <p class="text-muted" style="margin-bottom:10px">
+    Calculado a partir de la facturación. Cada unidad cubre <%= daysPerUnit %> días; la alerta se activa <%= alertDays %> días antes de terminar la cobertura.
+  </p>
+  <% if (magistrals.summary.length === 0) { %>
+    <p class="text-muted">El paciente no ha adquirido magistrales.</p>
+  <% } else { %>
+    <div class="table-wrapper" style="margin-bottom:16px">
+      <table class="table">
+        <thead>
+          <tr><th>Magistral</th><th>Última compra</th><th>Total adquirido</th><th>Renovación</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% magistrals.summary.forEach(m => { const st = STATUS[m.status]; %>
+            <tr>
+              <td><strong><%= m.generic_name %></strong><% if (m.commercial_name) { %><br><small class="text-muted"><%= m.commercial_name %></small><% } %></td>
+              <td><%= fdate(m.last_purchase_at) %><br><small class="text-muted"><%= +m.last_quantity %> <%= m.consumption_unit %> · <a href="/facturas/<%= m.last_invoice_id %>">Factura #<%= m.last_invoice_id %></a></small></td>
+              <td><%= +m.total_quantity %> <%= m.consumption_unit %><br><small class="text-muted"><%= m.purchases %> compra(s) · <%= money(m.total_amount) %></small></td>
+              <td>
+                <%= fday(m.renewal_date) %><br>
+                <small class="text-muted">
+                  <% if (m.status === 'no_renovar') { %>desde <%= fdate(m.dismissed_at) %>
+                  <% } else if (m.days_left < 0) { %>venció hace <%= -m.days_left %> día(s)
+                  <% } else if (m.days_left === 0) { %>vence hoy
+                  <% } else { %>en <%= m.days_left %> día(s)<% } %>
+                </small>
+              </td>
+              <td><span class="badge <%= st.cls %>"><%= st.label %></span></td>
+              <td>
+                <% if (m.status === 'no_renovar') { %>
+                  <form action="/pacientes/<%= patient.id %>/magistrales/<%= m.product_id %>/reactivar" method="POST" style="display:inline">
+                    <button type="submit" class="btn btn-sm">Reactivar alerta</button>
+                  </form>
+                <% } else { %>
+                  <form action="/pacientes/<%= patient.id %>/magistrales/<%= m.product_id %>/no-renovar" method="POST" style="display:inline">
+                    <button type="submit" class="btn btn-sm btn-danger"
+                            onclick="return confirm('¿Marcar este magistral como No renovar? La alerta se apagará hasta que el paciente vuelva a comprarlo.')">No renovar</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <h4 style="margin:0 0 8px">Historial de compras</h4>
+    <div class="table-wrapper">
+      <table class="table">
+        <thead><tr><th>Fecha</th><th>Magistral</th><th>Cantidad</th><th>Valor facturado</th><th>Factura</th></tr></thead>
+        <tbody>
+          <% magistrals.purchases.forEach(pu => { %>
+            <tr>
+              <td><%= fdate(pu.purchased_at) %></td>
+              <td><%= pu.generic_name %></td>
+              <td><%= +pu.quantity %> <%= pu.consumption_unit %></td>
+              <td><%= money(pu.amount) %></td>
+              <td><a href="/facturas/<%= pu.invoice_id %>">#<%= pu.invoice_id %></a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>

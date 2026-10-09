@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue\")",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(docker exec consultorio_db *)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -i http://localhost:3000/login)",
+      "Bash(powershell -NoProfile -Command \"Get-Process -Id 1984,11084,6804 -ErrorAction SilentlyContinue | Select-Object Id, Path, StartTime\" 2>&1)",
+      "Bash(rm -f /tmp/cookies.txt)",
+      "Bash(curl -s -c /tmp/cookies.txt -i http://localhost:3000/login -o /tmp/get_login.html -D /tmp/get_headers.txt)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -b /tmp/cookies.txt -i http://localhost:3000/dashboard -o /tmp/dash_body.html -D /tmp/dash_headers.txt)",
+      "Bash(cd *)",
+      "Bash(taskkill *)",
+      "Bash(rm -f /tmp/cookies3.txt /tmp/trace.txt)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec consultorio_db *)",
+      "Bash(node *)",
+      "Bash(curl -s -b /tmp/a_cookies.txt http://localhost:3000/agenda/3/editar -o /tmp/edit3.html)",
+      "Bash(curl -s -b /tmp/a_cookies.txt http://localhost:3000/agenda/3/editar)",
+      "Bash(tail *)",
+      "Bash(curl -s -b /tmp/s_cookies.txt http://localhost:3000/agenda/2/editar)",
+      "Bash(docker exec *)",
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(curl -s -b /tmp/e_cookies.txt \"http://localhost:3000/gastos/informe\")",
+      "Bash(curl -s -b /tmp/e_cookies.txt \"http://localhost:3000/pacientes/1\")",
+      "Bash(curl -s -b /tmp/e_cookies.txt -i \"http://localhost:3000/tratamientos/1/insumos\")",
+      "Bash(curl -s -b /tmp/e_cookies.txt \"http://localhost:3000/tratamientos/1/insumos\")"
+    ]
+  }
+}

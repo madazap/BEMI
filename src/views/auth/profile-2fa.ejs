@@ -1,0 +1,49 @@
+<div class="form-card" style="max-width:480px">
+
+  <% if (enabled) { %>
+    <p style="margin-bottom:16px">
+      <span class="badge badge-active">Activada</span>
+      La verificación en dos pasos está activa en tu cuenta.
+    </p>
+
+    <form action="/mi-cuenta/2fa/desactivar" method="POST" novalidate>
+      <div class="form-group">
+        <label for="password">Contraseña actual</label>
+        <input type="password" id="password" name="password" required
+               placeholder="Confirma tu contraseña para desactivar" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-danger">Desactivar verificación en dos pasos</button>
+    </form>
+
+  <% } else if (qrDataUrl) { %>
+    <p style="margin-bottom:12px">1. Escanea este código con Google Authenticator, Authy u otra app TOTP:</p>
+    <div style="text-align:center;margin-bottom:16px">
+      <img src="<%= qrDataUrl %>" alt="Código QR para 2FA" style="max-width:220px">
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+      ¿No puedes escanear? Ingresa este código manualmente en tu app: <br>
+      <code style="user-select:all"><%= secret %></code>
+    </p>
+
+    <form action="/mi-cuenta/2fa/confirmar" method="POST" novalidate>
+      <div class="form-group">
+        <label for="token">2. Ingresa el código de 6 dígitos que muestra la app</label>
+        <input type="text" id="token" name="token" required
+               inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+               placeholder="000000" autocomplete="one-time-code">
+      </div>
+      <button type="submit" class="btn btn-primary">Confirmar y activar</button>
+    </form>
+
+  <% } else { %>
+    <p style="margin-bottom:16px">
+      <span class="badge badge-inactive">Desactivada</span>
+      Agrega una capa extra de seguridad: además de tu contraseña, se pedirá un código de 6 dígitos
+      generado por una app de autenticación (Google Authenticator, Authy, etc.) al iniciar sesión.
+    </p>
+    <form action="/mi-cuenta/2fa/generar" method="POST">
+      <button type="submit" class="btn btn-primary">Activar verificación en dos pasos</button>
+    </form>
+  <% } %>
+
+</div>

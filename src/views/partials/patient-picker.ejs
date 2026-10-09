@@ -1,0 +1,150 @@
+<%
+  // Selector de paciente con modal de búsqueda (cédula, nombre, celular o email).
+  // Parámetros:
+  //   name        nombre del input oculto (default 'patient_id')
+  //   inputId     id del input oculto (default = name); dispara 'change' al seleccionar
+  //   selected    paciente preseleccionado { id, full_name, document_type, document_number } o null
+  //   required    impide enviar el formulario sin paciente
+  //   allowClear  muestra botón para quitar la selección (filtros)
+  //   autoSubmit  envía el formulario al seleccionar/quitar
+  //   emptyText   texto cuando no hay selección
+  const pp = {
+    name:       locals.name || 'patient_id',
+    selected:   locals.selected || null,
+    required:   !!locals.required,
+    allowClear: !!locals.allowClear,
+    autoSubmit: !!locals.autoSubmit,
+    emptyText:  locals.emptyText || 'Ningún paciente seleccionado'
+  };
+  pp.inputId = locals.inputId || pp.name;
+  const ppKey = pp.inputId;
+%>
+<input type="hidden" id="<%= pp.inputId %>" name="<%= pp.name %>" value="<%= pp.selected ? pp.selected.id : '' %>">
+<div class="patient-picker" data-picker="<%= ppKey %>">
+  <div class="patient-picker-info">
+    <% if (pp.selected) { %>
+      <strong><%= pp.selected.full_name %></strong>
+      <small><%= pp.selected.document_type || '' %> <%= pp.selected.document_number || '' %></small>
+    <% } else { %>
+      <span class="text-muted"><%= pp.emptyText %></span>
+    <% } %>
+  </div>
+  <div class="patient-picker-actions">
+    <% if (pp.allowClear) { %>
+      <button type="button" class="btn btn-sm pp-clear" title="Quitar" <%= pp.selected ? '' : 'hidden' %>>✕</button>
+    <% } %>
+    <button type="button" class="btn btn-sm btn-primary pp-open"><%= pp.selected ? 'Cambiar' : 'Buscar' %></button>
+  </div>
+</div>
+
+<dialog class="modal" data-picker-modal="<%= ppKey %>">
+  <div class="modal-header">
+    <h4>Seleccionar paciente</h4>
+    <button type="button" class="modal-close" aria-label="Cerrar">✕</button>
+  </div>
+  <input type="search" class="pp-search" placeholder="Buscar por cédula, nombre, celular o email…" autocomplete="off">
+  <div class="modal-results">
+    <p class="text-muted modal-hint">Escribe al menos 2 caracteres.</p>
+  </div>
+  <div class="modal-footer">
+    <a href="/pacientes/nuevo" target="_blank" class="btn btn-sm">+ Nuevo paciente</a>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  const cfg     = <%- JSON.stringify({ key: ppKey, required: pp.required, autoSubmit: pp.autoSubmit, emptyText: pp.emptyText }) %>;
+  const hidden  = document.getElementById(cfg.key);
+  const picker  = document.querySelector(`[data-picker="${cfg.key}"]`);
+  const modal   = document.querySelector(`[data-picker-modal="${cfg.key}"]`);
+  const info    = picker.querySelector('.patient-picker-info');
+  const btnOpen = picker.querySelector('.pp-open');
+  const btnClr  = picker.querySelector('.pp-clear');
+  const input   = modal.querySelector('.pp-search');
+  const results = modal.querySelector('.modal-results');
+  const LIMIT   = 20;
+  let timer = null, lastRows = [], reqSeq = 0;
+
+  const esc  = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const hint = msg => { results.innerHTML = `<p class="text-muted modal-hint">${msg}</p>`; };
+
+  function open() {
+    modal.showModal();
+    input.select();
+    input.focus();
+  }
+
+  btnOpen.addEventListener('click', open);
+  modal.querySelector('.modal-close').addEventListener('click', () => modal.close());
+  modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(search, 250);
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (lastRows.length === 1) choose(lastRows[0]);
+    }
+  });
+
+  async function search() {
+    const q = input.value.trim();
+    if (q.length < 2) { lastRows = []; return hint('Escribe al menos 2 caracteres.'); }
+    const seq = ++reqSeq;
+    try {
+      const res  = await fetch('/pacientes/api/buscar?q=' + encodeURIComponent(q));
+      const rows = await res.json();
+      if (seq !== reqSeq) return; // respuesta de una búsqueda anterior
+      lastRows = Array.isArray(rows) ? rows : [];
+      if (!lastRows.length) return hint('Sin resultados.');
+      results.innerHTML = `
+        <table class="table">
+          <thead><tr><th>Documento</th><th>Nombre</th><th>Celular</th><th>Email</th></tr></thead>
+          <tbody>${lastRows.map((p, i) => `
+            <tr class="modal-row" data-i="${i}">
+              <td>${esc(p.document_type)} ${esc(p.document_number)}</td>
+              <td>${esc(p.full_name)}</td>
+              <td>${esc(p.phone)}</td>
+              <td>${esc(p.email)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        ${lastRows.length === LIMIT ? `<p class="text-muted modal-hint">Mostrando ${LIMIT} resultados; refina la búsqueda.</p>` : ''}`;
+    } catch (err) {
+      hint('Error al buscar pacientes.');
+    }
+  }
+
+  results.addEventListener('click', e => {
+    const row = e.target.closest('tr.modal-row');
+    if (row) choose(lastRows[row.dataset.i]);
+  });
+
+  function setValue(p) {
+    hidden.value = p ? p.id : '';
+    info.innerHTML = p
+      ? `<strong>${esc(p.full_name)}</strong><small>${esc(p.document_type)} ${esc(p.document_number)}${p.phone ? ' · ' + esc(p.phone) : ''}</small>`
+      : `<span class="text-muted">${esc(cfg.emptyText)}</span>`;
+    btnOpen.textContent = p ? 'Cambiar' : 'Buscar';
+    if (btnClr) btnClr.hidden = !p;
+    hidden.dispatchEvent(new Event('change', { bubbles: true }));
+    if (cfg.autoSubmit && hidden.form) hidden.form.requestSubmit ? hidden.form.requestSubmit() : hidden.form.submit();
+  }
+
+  function choose(p) {
+    modal.close();
+    setValue(p);
+  }
+
+  if (btnClr) btnClr.addEventListener('click', () => setValue(null));
+
+  // El formulario usa novalidate: validamos aquí que haya paciente
+  if (cfg.required && hidden.form) {
+    hidden.form.addEventListener('submit', e => {
+      if (!hidden.value) { e.preventDefault(); open(); }
+    });
+  }
+})();
+</script>

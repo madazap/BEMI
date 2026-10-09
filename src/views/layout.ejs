@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> — BEMI</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo-mark">B</div>
+      <span class="sidebar-title">BEMI</span>
+    </div>
+    <ul class="sidebar-menu">
+      <li>
+        <a href="/dashboard" class="<%= locals.title === 'Panel Principal' ? 'active' : '' %>">
+          <i data-lucide="layout-dashboard"></i>Panel Principal
+        </a>
+      </li>
+      <% if (session.roles.includes('admin')) { %>
+      <li>
+        <a href="/usuarios" class="<%= locals.title && locals.title.includes('Usuari') ? 'active' : '' %>">
+          <i data-lucide="users"></i>Usuarios
+        </a>
+      </li>
+      <% } %>
+      <% if (session.roles.includes('admin') || session.roles.includes('vendedor')) { %>
+      <li class="menu-group">CRM</li>
+      <li>
+        <a href="/pacientes" class="<%= (locals.title && (locals.title.includes('Paciente') || locals.title.includes('Plan') || locals.title.includes('Sesión') || locals.title === 'Asignar Tratamiento')) || (locals.currentPath && locals.currentPath.startsWith('/pacientes')) ? 'active' : '' %>">
+          <i data-lucide="user-round"></i>Pacientes
+        </a>
+      </li>
+      <li>
+        <a href="/tratamientos" class="<%= ['Tratamientos', 'Nuevo Tratamiento', 'Editar Tratamiento'].includes(locals.title) ? 'active' : '' %>">
+          <i data-lucide="activity"></i>Tratamientos
+        </a>
+      </li>
+      <% } %>
+      <li class="menu-group">Agenda</li>
+      <li>
+        <a href="/agenda" class="<%= locals.title && (locals.title === 'Agenda' || locals.title === 'Detalle de Cita' || locals.title === 'Editar Cita') ? 'active' : '' %>">
+          <i data-lucide="calendar"></i>Calendario
+        </a>
+      </li>
+      <% if (session.roles.includes('admin') || session.roles.includes('vendedor')) { %>
+      <li class="menu-group">Comercial</li>
+      <li>
+        <a href="/cotizaciones" class="<%= locals.title && locals.title.includes('Cotizaci') ? 'active' : '' %>">
+          <i data-lucide="file-text"></i>Cotizaciones
+        </a>
+      </li>
+      <li>
+        <a href="/facturas" class="<%= locals.title && (locals.title.includes('Factura') || locals.title.includes('Recibo') || locals.title === 'Por Cobrar') ? 'active' : '' %>">
+          <i data-lucide="receipt"></i>Facturación
+        </a>
+      </li>
+      <% } %>
+      <% if (session.roles.includes('admin') || session.roles.includes('bodeguero')) { %>
+      <li class="menu-group">Inventario</li>
+      <li>
+        <a href="/inventario" class="<%= locals.title === 'Inventario' ? 'active' : '' %>">
+          <i data-lucide="package"></i>Stock Actual
+        </a>
+      </li>
+      <li>
+        <a href="/inventario/movimientos" class="<%= locals.title === 'Movimientos de Stock' ? 'active' : '' %>">
+          <i data-lucide="arrow-left-right"></i>Movimientos
+        </a>
+      </li>
+      <li>
+        <a href="/inventario/ingresos/nuevo" class="<%= locals.title === 'Registrar Ingreso' ? 'active' : '' %>">
+          <i data-lucide="package-plus"></i>Registrar Ingreso
+        </a>
+      </li>
+      <li>
+        <a href="/productos" class="<%= locals.title && locals.title.includes('Producto') ? 'active' : '' %>">
+          <i data-lucide="box"></i>Productos
+        </a>
+      </li>
+      <li>
+        <a href="/proveedores" class="<%= locals.title && locals.title.includes('Proveedor') ? 'active' : '' %>">
+          <i data-lucide="truck"></i>Proveedores
+        </a>
+      </li>
+      <% } %>
+      <% if (session.roles.includes('admin')) { %>
+      <li class="menu-group">Administración</li>
+      <li>
+        <a href="/gastos" class="<%= locals.title && locals.title.includes('Gasto') ? 'active' : '' %>">
+          <i data-lucide="wallet"></i>Gastos
+        </a>
+      </li>
+      <li>
+        <a href="/tarifas" class="<%= locals.title && locals.title.includes('Tarifa') ? 'active' : '' %>">
+          <i data-lucide="badge-dollar-sign"></i>Tarifas Profesional
+        </a>
+      </li>
+      <% } %>
+      <li class="menu-group"></li>
+      <li>
+        <a href="/mi-cuenta/2fa" class="<%= locals.title === 'Verificación en dos pasos' ? 'active' : '' %>">
+          <i data-lucide="shield-check"></i>Seguridad
+        </a>
+      </li>
+      <li>
+        <a href="/ayuda" class="<%= locals.title === 'Ayuda' ? 'active' : '' %>">
+          <i data-lucide="circle-help"></i>Ayuda
+        </a>
+      </li>
+    </ul>
+    <div class="sidebar-footer">
+      <div class="sidebar-user-info">
+        <div class="sidebar-avatar"><%= (session.userName || '?').charAt(0).toUpperCase() %></div>
+        <span class="sidebar-user"><%= session.userName || '' %></span>
+      </div>
+      <form action="/logout" method="POST">
+        <button type="submit" class="btn-logout" title="Cerrar sesión">
+          <i data-lucide="log-out"></i>
+        </button>
+      </form>
+    </div>
+  </nav>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <button class="btn-menu" id="btnMenu" aria-label="Menú">
+        <i data-lucide="menu"></i>
+      </button>
+      <h1 class="topbar-title"><%= title %></h1>
+      <div class="topbar-notifs" id="topbarNotifs"></div>
+    </header>
+
+    <main class="content">
+      <%- include('partials/flash') %>
+      <%- body %>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+  <script>
+    lucide.createIcons();
+
+    document.getElementById('btnMenu').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    });
+    fetch('/api/notificaciones')
+      .then(r => r.json())
+      .then(data => {
+        const el = document.getElementById('topbarNotifs');
+        let html = '';
+        if (data.lowStock > 0)     html += `<a href="/inventario" class="notif-badge notif-stock">${data.lowStock} stock bajo</a>`;
+        if (data.expiringLots > 0) html += `<a href="/inventario" class="notif-badge notif-expiry">${data.expiringLots} por vencer</a>`;
+        if (data.magistralRenewals > 0) html += `<a href="/dashboard#renovaciones" class="notif-badge notif-renewal">${data.magistralRenewals} magistral${data.magistralRenewals === 1 ? '' : 'es'} por renovar</a>`;
+        el.innerHTML = html;
+        lucide.createIcons();
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

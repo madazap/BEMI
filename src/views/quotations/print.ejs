@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cotización #<%= quotationData.id %> — Dra. Maria Belen Navarro</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Montserrat', system-ui, sans-serif; font-size: 12px; color: #2c2f2c; padding: 36px; background: #fff; }
+
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid #B0845B; }
+    .header-left { display: flex; flex-direction: column; }
+    .logo-img { height: 120px; width: auto; margin-bottom: 10px; }
+    .doctor-name { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-weight: 600; color: #5F816F; margin-bottom: 5px; }
+    .contact-info { font-size: 10px; color: #7a7d78; line-height: 1.8; }
+
+    .doc-info { text-align: right; padding-top: 8px; }
+    .doc-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; color: #5F816F; letter-spacing: 0.06em; }
+    .doc-number { font-size: 13px; color: #B0845B; font-weight: 600; margin-bottom: 10px; }
+    .doc-meta { font-size: 11px; color: #7a7d78; line-height: 2; }
+    .doc-meta strong { color: #2c2f2c; }
+
+    /* Sections */
+    .section { margin-bottom: 22px; }
+    .section-title { font-size: 9px; font-family: 'Montserrat', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: #5F816F; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #e0d9d0; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 24px; }
+    .info-grid p { font-size: 12px; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+    th { background: #eef3f0; font-family: 'Montserrat', sans-serif; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; padding: 9px 10px; text-align: left; color: #5F816F; border-bottom: 1px solid #c5d5cc; }
+    td { padding: 9px 10px; border-bottom: 1px solid #ede8e0; font-size: 12px; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    .discount-row td { font-size: 11px; color: #7a7d78; border-top: 1px solid #ede8e0; }
+    .total-row td { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; background: #5F816F; color: #fff; border: none; }
+
+    /* Notas del documento */
+    .notes-box { background: #f9f7f5; border: 1px solid #e0d9d0; padding: 10px 14px; border-radius: 4px; font-size: 12px; line-height: 1.7; color: #2c2f2c; }
+
+    /* Nota de validez */
+    .validity-note { margin-top: 28px; padding: 12px 16px; border-left: 3px solid #B0845B; background: #faf5ee; font-size: 10px; color: #5a5a5a; line-height: 1.8; }
+    .validity-note strong { color: #B0845B; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+
+    /* Botón */
+    .print-btn { margin-top: 28px; padding: 10px 28px; background: #5F816F; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-family: 'Montserrat', sans-serif; font-weight: 500; cursor: pointer; letter-spacing: .04em; }
+    .print-btn:hover { background: #4a6657; }
+    @media print { .print-btn { display: none; } }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-left">
+      <img src="/img/Logo.png" class="logo-img" alt="BEMI">
+      <div class="doctor-name">Dra. Maria Belen Navarro</div>
+      <div class="contact-info">
+        Tel. +57 301 391 2240<br>
+        Cra. 5 # 9-26 Sur, C.E. Sabana Park, Torre 2 Cons. 506<br>
+        Cajicá, Cundinamarca
+      </div>
+    </div>
+    <div class="doc-info">
+      <div class="doc-title">COTIZACIÓN</div>
+      <div class="doc-number">#<%= String(quotationData.id).padStart(4,'0') %></div>
+      <div class="doc-meta">
+        <p>Fecha: <strong><%= new Date(quotationData.created_at).toLocaleDateString('es-CO') %></strong></p>
+        <p>Estado: <strong><%= quotationData.status.toUpperCase() %></strong></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Paciente</div>
+    <div class="info-grid">
+      <p><strong>Nombre:</strong> <%= quotationData.patient_name %></p>
+      <p><strong>Documento:</strong> <%= quotationData.patient_document_type %> <%= quotationData.patient_document %></p>
+      <p><strong>Correo:</strong> <%= quotationData.patient_email || '—' %></p>
+      <p><strong>Preparada por:</strong> <%= quotationData.created_by_name %></p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Detalle de servicios</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Descripción</th>
+          <th style="width:60px">Cant.</th>
+          <th style="width:110px">Precio Unit.</th>
+          <th style="width:100px">Descuento</th>
+          <th style="width:110px;text-align:right">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% quotationData.items.forEach(item => {
+             const ls = item.quantity * item.unit_price;
+             const ld = item.discount_type === 'porcentaje' ? ls * item.discount_value / 100
+                      : item.discount_type === 'valor_fijo' ? Number(item.discount_value) : 0;
+        %>
+          <tr>
+            <td><%= item.item_type === 'magistral' ? MAGISTRAL_LABEL : item.description %></td>
+            <td><%= item.quantity %></td>
+            <td>$<%= Number(item.unit_price).toLocaleString('es-CO') %></td>
+            <td><%= ld > 0 ? '-$' + ld.toLocaleString('es-CO') : '—' %></td>
+            <td style="text-align:right">$<%= (ls - ld).toLocaleString('es-CO') %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <% const sub = quotationData.items.reduce((a,it) => {
+               const ls = it.quantity * it.unit_price;
+               const ld = it.discount_type === 'porcentaje' ? ls * it.discount_value / 100
+                        : it.discount_type === 'valor_fijo' ? Number(it.discount_value) : 0;
+               return a + (ls - ld);
+           }, 0);
+           const gd = quotationData.discount_type === 'porcentaje' ? sub * quotationData.discount_value / 100
+                    : quotationData.discount_type === 'valor_fijo' ? Number(quotationData.discount_value) : 0;
+        %>
+        <% if (gd > 0) { %>
+          <tr class="discount-row">
+            <td colspan="4" style="text-align:right">Descuento global</td>
+            <td style="text-align:right">-$<%= gd.toLocaleString('es-CO') %></td>
+          </tr>
+        <% } %>
+        <tr class="total-row">
+          <td colspan="4" style="text-align:right">TOTAL</td>
+          <td style="text-align:right">$<%= Number(quotationData.total).toLocaleString('es-CO') %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <% if (quotationData.notes) { %>
+    <div class="section">
+      <div class="section-title">Notas</div>
+      <div class="notes-box"><%= quotationData.notes %></div>
+    </div>
+  <% } %>
+
+  <div class="validity-note">
+    <strong>Nota importante:</strong> Los precios acá reflejados tienen una validez de 15 días. Los valores finales de los servicios pueden tener variaciones según método de pago por cargos adicionales de pagos con medios electrónicos, transferencias internacionales o tarjetas.
+  </div>
+
+  <button class="print-btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+
+</body>
+</html>

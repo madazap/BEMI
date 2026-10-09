@@ -1,0 +1,536 @@
+<style>
+  .help-layout {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  .help-toc {
+    width: 220px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 24px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 0;
+  }
+
+  .help-toc-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 18px 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+
+  .help-toc a {
+    display: block;
+    padding: 7px 18px;
+    font-size: 13px;
+    color: var(--text);
+    border-left: 3px solid transparent;
+    transition: all .15s;
+  }
+
+  .help-toc a:hover,
+  .help-toc a.active {
+    background: var(--primary-lt);
+    color: var(--primary);
+    border-left-color: var(--primary);
+    text-decoration: none;
+  }
+
+  .help-toc a.sub {
+    padding-left: 30px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .help-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .help-section {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    scroll-margin-top: 24px;
+  }
+
+  .help-section h2 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .help-section h2 svg {
+    width: 20px;
+    height: 20px;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+
+  .help-section .section-intro {
+    color: var(--muted);
+    font-size: 13.5px;
+    margin: 0 0 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .help-section h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 20px 0 8px;
+  }
+
+  .help-section p {
+    font-size: 13.5px;
+    color: #444;
+    line-height: 1.65;
+    margin: 0 0 10px;
+  }
+
+  .help-section ul, .help-section ol {
+    padding-left: 20px;
+    margin: 0 0 12px;
+  }
+
+  .help-section li {
+    font-size: 13.5px;
+    color: #444;
+    line-height: 1.65;
+    margin-bottom: 4px;
+  }
+
+  .help-tip {
+    background: var(--primary-lt);
+    border-left: 3px solid var(--primary);
+    border-radius: 0 6px 6px 0;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: var(--primary-dk);
+  }
+
+  .help-tip strong { color: var(--primary-dk); }
+
+  .help-warn {
+    background: #fff8e1;
+    border-left: 3px solid #f57f17;
+    border-radius: 0 6px 6px 0;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: #7c5800;
+  }
+
+  .help-steps {
+    counter-reset: steps;
+    padding: 0;
+    list-style: none;
+  }
+
+  .help-steps li {
+    counter-increment: steps;
+    padding: 8px 12px 8px 42px;
+    position: relative;
+    background: var(--bg);
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
+
+  .help-steps li::before {
+    content: counter(steps);
+    position: absolute;
+    left: 12px;
+    top: 8px;
+    width: 22px;
+    height: 22px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .help-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--accent-lt);
+    color: var(--accent);
+    margin: 0 2px;
+  }
+
+  .help-role-tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 0 2px;
+  }
+
+  .role-admin   { background: #e8eaf6; color: #3949ab; }
+  .role-vendedor{ background: #e8f5e9; color: #2e7d32; }
+  .role-bodega  { background: #fff3e0; color: #e65100; }
+
+  .help-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 18px 0;
+  }
+
+  @media (max-width: 860px) {
+    .help-layout { flex-direction: column; }
+    .help-toc    { width: 100%; position: static; }
+  }
+</style>
+
+<div class="help-layout">
+
+  <!-- Tabla de contenidos -->
+  <nav class="help-toc">
+    <div class="help-toc-title">Contenido</div>
+    <a href="#intro">¿Qué es BEMI?</a>
+    <a href="#roles">Roles y accesos</a>
+    <a href="#dashboard">Panel Principal</a>
+    <a href="#inventario">Inventario</a>
+    <a href="#sub-productos" class="sub">Productos</a>
+    <a href="#sub-ingresos" class="sub">Registrar ingreso</a>
+    <a href="#sub-magistrales" class="sub">Magistrales</a>
+    <a href="#sub-alertas" class="sub">Alertas</a>
+    <a href="#pacientes">Pacientes (CRM)</a>
+    <a href="#sub-tratamientos" class="sub">Tratamientos</a>
+    <a href="#sub-sesiones" class="sub">Sesiones</a>
+    <a href="#sub-magistrales" class="sub">Magistrales adquiridos</a>
+    <a href="#agenda">Agenda</a>
+    <a href="#cotizaciones">Cotizaciones</a>
+    <a href="#sub-aceptacion-parcial" class="sub">Aceptación parcial</a>
+    <a href="#pagos">Facturación y Pagos</a>
+    <a href="#gastos">Gastos</a>
+    <a href="#ingresos-calculo">¿Cómo se calculan los ingresos?</a>
+    <a href="#usuarios">Usuarios y Roles</a>
+  </nav>
+
+  <!-- Contenido principal -->
+  <div class="help-content">
+
+    <!-- ¿Qué es BEMI? -->
+    <div class="help-section" id="intro">
+      <h2><i data-lucide="info"></i>¿Qué es BEMI?</h2>
+      <p class="section-intro">Sistema administrativo web para el consultorio de tricología y estética. Centraliza inventario, pacientes, agenda, cotizaciones, pagos y métricas en un solo lugar.</p>
+      <p>BEMI reemplaza el manejo manual en Excel y papel con una plataforma accesible desde cualquier dispositivo (computador o celular). Cada acción queda registrada con el usuario que la realizó.</p>
+      <div class="help-tip">
+        <strong>Acceso:</strong> Ingresá con tu correo y contraseña. Si olvidás tu contraseña, pedile al administrador que la restablezca desde el módulo de Usuarios.
+      </div>
+    </div>
+
+    <!-- Roles -->
+    <div class="help-section" id="roles">
+      <h2><i data-lucide="shield"></i>Roles y accesos</h2>
+      <p class="section-intro">Cada usuario tiene uno o más roles que determinan qué módulos puede ver y usar.</p>
+      <h3>Roles disponibles</h3>
+      <ul>
+        <li><span class="help-role-tag role-admin">Admin</span> — Acceso total: usuarios, inventario, CRM, agenda, cotizaciones, facturación, gastos y tarifas.</li>
+        <li><span class="help-role-tag role-vendedor">Vendedor</span> — CRM, agenda, cotizaciones y facturación.</li>
+        <li><span class="help-role-tag role-bodega">Bodeguero</span> — Inventario completo: productos, ingresos, movimientos y proveedores.</li>
+      </ul>
+      <p>Un mismo usuario puede tener varios roles a la vez. El administrador los gestiona desde <strong>Usuarios → editar usuario</strong>.</p>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="help-section" id="dashboard">
+      <h2><i data-lucide="layout-dashboard"></i>Panel Principal</h2>
+      <p class="section-intro">Vista rápida del estado del consultorio: ingresos, gastos, citas y rentabilidad del mes en curso.</p>
+      <h3>Métricas del mes</h3>
+      <ul>
+        <li><strong>Ingresos del mes</strong> — total de pagos efectivamente cobrados en el mes (base caja).</li>
+        <li><strong>Gastos del mes</strong> — gastos fijos registrados + compras de insumos ingresadas al stock.</li>
+        <li><strong>Mano de obra</strong> — horas profesionales de sesiones realizadas × tarifa vigente.</li>
+        <li><strong>Margen neto</strong> — Ingresos − Gastos fijos − Compras − Mano de obra.</li>
+      </ul>
+      <h3>Notificaciones</h3>
+      <p>En la barra superior aparecen alertas automáticas cuando hay:</p>
+      <ul>
+        <li>Productos con <strong>stock por debajo del mínimo</strong> configurado.</li>
+        <li>Lotes con <strong>fecha de vencimiento próxima</strong> (según los días configurados por producto).</li>
+      </ul>
+    </div>
+
+    <!-- Inventario -->
+    <div class="help-section" id="inventario">
+      <h2><i data-lucide="package"></i>Inventario</h2>
+      <p class="section-intro">Gestión completa de productos, lotes y movimientos de stock. Solo visible para roles <span class="help-role-tag role-admin">Admin</span> y <span class="help-role-tag role-bodega">Bodeguero</span>.</p>
+
+      <h3 id="sub-productos">Productos</h3>
+      <p>Cada producto en el catálogo tiene:</p>
+      <ul>
+        <li><strong>SKU único</strong>, nombre genérico, nombre comercial, presentación, concentración, fabricante y registro sanitario.</li>
+        <li><strong>Unidad de compra</strong> (ej. caja) y <strong>unidad de consumo</strong> (ej. ampolla) con el <strong>factor de conversión</strong> entre ambas.</li>
+        <li><strong>Stock mínimo</strong> en unidad de consumo — cuando se llega a este nivel, aparece la alerta en el panel.</li>
+        <li><strong>Días de alerta de vencimiento</strong> — cuántos días antes del vencimiento del lote se activa la notificación.</li>
+      </ul>
+      <div class="help-tip">
+        <strong>Importante:</strong> El stock siempre se gestiona en <em>unidad de consumo</em>. La conversión ocurre automáticamente al registrar un ingreso.
+      </div>
+
+      <hr class="help-divider">
+
+      <h3 id="sub-ingresos">Registrar un ingreso de mercancía</h3>
+      <p>Cada vez que llega mercancía al consultorio se registra un ingreso. Esto crea un lote con trazabilidad completa.</p>
+      <ol class="help-steps">
+        <li>Ir a <strong>Inventario → Registrar Ingreso</strong>.</li>
+        <li>Seleccionar el producto y el proveedor.</li>
+        <li>Ingresar número de lote, fecha de vencimiento y cantidad comprada (en unidad de compra).</li>
+        <li>Ingresar el precio por unidad de consumo.</li>
+        <li>El sistema calcula automáticamente la cantidad en unidades de consumo (<code>compra × factor</code>) y el costo total del ingreso.</li>
+        <li>Guardar — el stock se actualiza y el costo total queda registrado como gasto de insumos del consultorio.</li>
+      </ol>
+      <div class="help-tip">
+        <strong>FEFO (First Expired, First Out):</strong> El sistema descuenta automáticamente primero los lotes más próximos a vencer cuando se realiza una sesión. No se necesita seleccionar el lote manualmente.
+      </div>
+
+      <hr class="help-divider">
+
+      <h3 id="sub-magistrales">Productos magistrales</h3>
+      <p>Los medicamentos magistrales (preparados en farmacia) son productos marcados con el flag <em>Es magistral</em>. Tienen dos precios adicionales:</p>
+      <ul>
+        <li><strong>Precio de venta</strong> — lo que se le cobra al paciente.</li>
+        <li><strong>Precio de adquisición</strong> — lo que le cuesta al consultorio.</li>
+      </ul>
+      <p>Cuando se vende un magistral a un paciente (desde Facturación), el sistema descuenta el stock y genera el ingreso correspondiente. El margen por magistral es <code>venta − adquisición</code>.</p>
+
+      <hr class="help-divider">
+
+      <h3 id="sub-alertas">Alertas de stock y vencimiento</h3>
+      <ul>
+        <li><strong>Stock mínimo:</strong> Configurá el mínimo por producto al crear o editar el producto. Cuando el stock disponible cae por debajo, aparece la alerta en la barra superior.</li>
+        <li><strong>Vencimiento:</strong> Configurá los días de aviso por producto. Si un lote vence en ese plazo o menos, aparece la alerta.</li>
+      </ul>
+      <p>Las alertas son visibles para <strong>todos los roles</strong>.</p>
+    </div>
+
+    <!-- Pacientes -->
+    <div class="help-section" id="pacientes">
+      <h2><i data-lucide="user-round"></i>Pacientes (CRM)</h2>
+      <p class="section-intro">Gestión del historial de tratamientos y sesiones por paciente. Visible para roles <span class="help-role-tag role-admin">Admin</span> y <span class="help-role-tag role-vendedor">Vendedor</span>.</p>
+
+      <h3>Crear un paciente</h3>
+      <ol class="help-steps">
+        <li>Ir a <strong>Pacientes → Nuevo Paciente</strong>.</li>
+        <li>Ingresar tipo y número de documento, nombre completo, fecha de nacimiento, teléfono, correo y dirección.</li>
+        <li>Guardar. El paciente queda en el listado y se puede buscar por nombre o documento.</li>
+      </ol>
+      <div class="help-warn">
+        La historia clínica <strong>no se almacena en el sistema</strong> por regulación. Solo se guardan los datos administrativos y el registro de tratamientos y sesiones.
+      </div>
+
+      <hr class="help-divider">
+
+      <h3 id="sub-tratamientos">Planes de tratamiento</h3>
+      <p>Un paciente puede tener uno o más planes de tratamiento activos. Cada plan está vinculado a un tratamiento del catálogo y tiene un plan de pago:</p>
+      <ul>
+        <li><span class="help-tag">Por sesión</span> — se factura cada sesión de forma independiente.</li>
+        <li><span class="help-tag">Paquete</span> — se factura el conjunto completo de sesiones.</li>
+      </ul>
+      <p>Para crear un plan de tratamiento entrá al perfil del paciente → pestaña <strong>Tratamientos</strong> → <strong>Nuevo Plan</strong>.</p>
+
+      <hr class="help-divider">
+
+      <h3 id="sub-sesiones">Registrar una sesión</h3>
+      <p>Una sesión es la atención efectiva del paciente. Al marcar una sesión como <em>realizada</em>:</p>
+      <ul>
+        <li>Se registran los <strong>insumos consumidos</strong>, que descuentan automáticamente del inventario por el lote correspondiente (FEFO).</li>
+        <li>Se registran las <strong>horas del profesional</strong>.</li>
+        <li>El sistema guarda un <strong>snapshot de márgenes</strong>: precio de venta, costo de ejecución y margen al momento de la sesión. Esto garantiza que cambios futuros en precios no afecten el historial.</li>
+      </ul>
+      <ol class="help-steps">
+        <li>Entrá al perfil del paciente → plan de tratamiento activo → pestaña <strong>Sesiones</strong>.</li>
+        <li>Hacé clic en <strong>Registrar sesión</strong>.</li>
+        <li>Completá la fecha, horas del profesional, y los insumos utilizados con sus cantidades.</li>
+        <li>Guardar — el inventario y los márgenes se actualizan automáticamente.</li>
+      </ol>
+
+      <hr class="help-divider">
+
+      <h3 id="sub-magistrales">Magistrales adquiridos</h3>
+      <p>La ficha del paciente muestra automáticamente los magistrales que ha adquirido, a partir de sus facturas (no hay que registrarlos a mano):</p>
+      <ul>
+        <li>Historial de compras: fecha, magistral, cantidad, valor facturado y factura.</li>
+        <li>Resumen por magistral con la fecha de renovación: cada unidad cubre 30 días, y una nueva compra antes de terminar se suma a la cobertura.</li>
+        <li>Estado: <strong>Vigente</strong>, <strong>Por renovar</strong> (5 días o menos), <strong>Vencida</strong> o <strong>No renovar</strong>.</li>
+      </ul>
+      <p>Las alertas aparecen en las notificaciones de la barra superior y en el panel principal (Magistrales por renovar). Si el paciente suspendió un magistral, usá <em>No renovar</em> para apagar su alerta; se reactiva sola si lo vuelve a comprar.</p>
+    </div>
+
+    <!-- Agenda -->
+    <div class="help-section" id="agenda">
+      <h2><i data-lucide="calendar"></i>Agenda</h2>
+      <p class="section-intro">Calendario del profesional con vistas día, semana y mes. Visible para todos los roles.</p>
+      <h3>Crear una cita</h3>
+      <ol class="help-steps">
+        <li>Toda cita se agenda desde el plan de tratamiento del paciente: ir a <strong>Pacientes → [paciente] → Plan de tratamiento</strong> y elegir <strong>Agendar</strong> en la sesión correspondiente.</li>
+        <li>Seleccionar fecha y hora. La sesión queda vinculada automáticamente al calendario.</li>
+        <li>Guardar. La cita queda en estado <span class="help-tag">Agendada</span>.</li>
+      </ol>
+      <h3>Estados de una cita</h3>
+      <ul>
+        <li><span class="help-tag">Agendada</span> — cita registrada, pendiente de confirmación.</li>
+        <li><span class="help-tag">Confirmada</span> — el paciente confirmó su asistencia.</li>
+        <li><span class="help-tag">Realizada</span> — la atención se efectuó. Puede vincularse a una sesión del plan de tratamiento.</li>
+        <li><span class="help-tag">Cancelada</span> — la cita no se realizó.</li>
+      </ul>
+    </div>
+
+    <!-- Cotizaciones -->
+    <div class="help-section" id="cotizaciones">
+      <h2><i data-lucide="file-text"></i>Cotizaciones</h2>
+      <p class="section-intro">Generación y seguimiento de propuestas comerciales por paciente. Visible para roles <span class="help-role-tag role-admin">Admin</span> y <span class="help-role-tag role-vendedor">Vendedor</span>.</p>
+      <h3>Flujo de una cotización</h3>
+      <ol class="help-steps">
+        <li><strong>Borrador:</strong> Se crea la cotización con líneas de sesiones o magistrales, precios y descuentos. Se puede editar libremente.</li>
+        <li><strong>Enviada:</strong> Se marca como enviada al paciente. Sigue siendo editable si el paciente pide cambios.</li>
+        <li><strong>Aprobada:</strong> El paciente acepta. A partir de este punto se puede generar el plan de tratamiento y la factura correspondiente.</li>
+        <li><strong>Rechazada:</strong> El paciente no acepta. Queda en el historial.</li>
+      </ol>
+      <h3>Líneas de cotización</h3>
+      <ul>
+        <li><span class="help-tag">Sesión</span> — vinculada a un tratamiento del catálogo con su precio de lista.</li>
+        <li><span class="help-tag">Magistral</span> — vinculada a un producto magistral con su precio de venta.</li>
+      </ul>
+      <p>Podés aplicar descuentos por línea (porcentaje o valor fijo) y/o sobre el total de la cotización. La cotización se puede exportar a <strong>PDF</strong> para compartir con el paciente.</p>
+
+      <hr class="help-divider">
+
+      <h3 id="sub-aceptacion-parcial">Caso de uso: el paciente acepta solo parte de la cotización</h3>
+      <p>Es habitual que el paciente reciba una cotización con 3 tratamientos y quiera tomar solo 2, o que pida un descuento diferente al ofrecido. El sistema lo maneja editando la cotización antes de aprobarla, sin necesidad de crear una nueva.</p>
+      <ol class="help-steps">
+        <li>Abrí la cotización en estado <span class="help-tag">Enviada</span>.</li>
+        <li>Hacé clic en <strong>Editar</strong>. La cotización sigue en estado <em>enviada</em> y es completamente modificable.</li>
+        <li>Eliminá los ítems que el paciente rechazó usando el botón <strong>✕</strong> al final de cada fila.</li>
+        <li>Si el paciente pidió otro descuento, ajustalo por línea o en el total global.</li>
+        <li>Guardá los cambios. El total se recalcula automáticamente.</li>
+        <li>De vuelta en el detalle, hacé clic en <strong>Aprobar</strong>. Solo los ítems que quedaron en la cotización pasarán a la factura y al plan de tratamiento.</li>
+      </ol>
+      <div class="help-tip">
+        <strong>La cotización original no se pierde:</strong> si el paciente en otro momento quiere retomar un tratamiento que había rechazado, podés crear una nueva cotización para ese ítem específico.
+      </div>
+      <div class="help-warn">
+        No uses <strong>Rechazar</strong> si el paciente aceptó aunque sea un ítem. Rechazar cierra la cotización completa. Editá y aprobá con lo que sí aceptó.
+      </div>
+    </div>
+
+    <!-- Facturación -->
+    <div class="help-section" id="pagos">
+      <h2><i data-lucide="receipt"></i>Facturación y Pagos</h2>
+      <p class="section-intro">Registro de cobros y estado de cuenta por paciente. Visible para roles <span class="help-role-tag role-admin">Admin</span> y <span class="help-role-tag role-vendedor">Vendedor</span>.</p>
+      <h3>Crear una factura</h3>
+      <ol class="help-steps">
+        <li>Ir a <strong>Facturación → Nueva Factura</strong> o desde el perfil del paciente.</li>
+        <li>Agregar líneas: sesiones realizadas o magistrales vendidos.</li>
+        <li>Guardar. La factura queda en estado <span class="help-tag">Pendiente</span>.</li>
+      </ol>
+      <h3>Registrar un pago</h3>
+      <ol class="help-steps">
+        <li>Abrí la factura del paciente.</li>
+        <li>Hacé clic en <strong>Registrar Pago</strong>.</li>
+        <li>Ingresá el monto y el medio de pago: <span class="help-tag">Efectivo</span>, <span class="help-tag">Transferencia</span> o <span class="help-tag">Datáfono</span>.</li>
+        <li>Guardar. El sistema actualiza el estado de la factura automáticamente.</li>
+      </ol>
+      <h3>Estados de una factura</h3>
+      <ul>
+        <li><span class="help-tag">Pendiente</span> — sin pagos registrados aún.</li>
+        <li><span class="help-tag">Parcial</span> — se registraron pagos pero no cubren el total.</li>
+        <li><span class="help-tag">Pagado</span> — el total fue cubierto.</li>
+      </ul>
+      <p>El recibo de caja se puede exportar a <strong>PDF</strong> desde el detalle de la factura.</p>
+    </div>
+
+    <!-- Ingresos -->
+    <div class="help-section" id="ingresos-calculo">
+      <h2><i data-lucide="trending-up"></i>¿Cómo se calculan los ingresos?</h2>
+      <p class="section-intro">El sistema usa <strong>base caja</strong>: solo cuenta el dinero efectivamente recibido, no lo facturado.</p>
+      <p>Los ingresos del mes en el Panel Principal son la suma de todos los <strong>pagos cobrados</strong> en ese período, sin importar cuándo se emitió la factura. Esto significa:</p>
+      <ul>
+        <li>Una factura <em>pendiente</em> no suma como ingreso hasta que se registre un pago.</li>
+        <li>Un pago parcial suma solo lo cobrado, no el total facturado.</li>
+        <li>Si un paciente paga en meses distintos, cada pago suma en el mes en que se registró.</li>
+      </ul>
+      <div class="help-tip">
+        <strong>¿Por qué base caja?</strong> Para un consultorio pequeño, lo que importa saber es cuánto dinero entró realmente este mes, no cuánto se emitió en papel.
+      </div>
+    </div>
+
+    <!-- Gastos -->
+    <div class="help-section" id="gastos">
+      <h2><i data-lucide="wallet"></i>Gastos</h2>
+      <p class="section-intro">Control de gastos fijos del consultorio. Solo visible para rol <span class="help-role-tag role-admin">Admin</span>.</p>
+      <h3>Categorías de gastos fijos</h3>
+      <p>Podés crear categorías libremente (arriendo, servicios, salarios, etc.) desde <strong>Gastos → Categorías</strong>. Cada categoría activa genera un registro mensual donde ingresás el valor de ese mes.</p>
+      <h3>¿Cómo se calculan los gastos totales?</h3>
+      <p>Los gastos del período son la suma de tres componentes:</p>
+      <ol>
+        <li><strong>Gastos fijos</strong> — los valores ingresados manualmente por categoría en el mes.</li>
+        <li><strong>Compras de insumos</strong> — calculados automáticamente desde los ingresos de stock registrados en el período. No requieren registro extra.</li>
+        <li><strong>Mano de obra</strong> — calculada desde las horas de sesiones realizadas × la tarifa profesional vigente.</li>
+      </ol>
+      <div class="help-tip">
+        Las compras de insumos se registran automáticamente cuando ingresás mercancía al inventario. No hace falta registrarlas como gasto por separado.
+      </div>
+    </div>
+
+    <!-- Usuarios -->
+    <div class="help-section" id="usuarios">
+      <h2><i data-lucide="users"></i>Usuarios y Roles</h2>
+      <p class="section-intro">Gestión de accesos al sistema. Solo visible para rol <span class="help-role-tag role-admin">Admin</span>.</p>
+      <h3>Crear un usuario</h3>
+      <ol class="help-steps">
+        <li>Ir a <strong>Usuarios → Nuevo Usuario</strong>.</li>
+        <li>Ingresar nombre, correo electrónico y contraseña inicial.</li>
+        <li>Asignarle uno o más roles (<em>Admin</em>, <em>Vendedor</em>, <em>Bodeguero</em>).</li>
+        <li>Guardar. El usuario ya puede iniciar sesión.</li>
+      </ol>
+      <h3>Cambiar contraseña o roles</h3>
+      <p>Desde la lista de usuarios, hacé clic en <strong>Editar</strong> en el usuario correspondiente. Podés cambiar el nombre, correo, contraseña y los roles asignados. También podés desactivar un usuario para que no pueda ingresar sin eliminarlo del historial.</p>
+    </div>
+
+  </div><!-- /help-content -->
+</div><!-- /help-layout -->
+
+<script>
+  // Resaltar sección activa en la tabla de contenidos al hacer scroll
+  const sections  = document.querySelectorAll('.help-section');
+  const tocLinks  = document.querySelectorAll('.help-toc a');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        tocLinks.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`.help-toc a[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>

@@ -1,0 +1,104 @@
+<div class="patient-card" style="margin-bottom:20px">
+  <div class="patient-card-header">
+    <div>
+      <p><strong>Paciente:</strong> <a href="/pacientes/<%= invoiceData.patient_id %>"><%= invoiceData.patient_name %></a></p>
+      <% if (invoiceData.treatment_name) { %><p><strong>Plan:</strong> <%= invoiceData.treatment_name %></p><% } %>
+      <p><strong>Fecha:</strong> <%= new Date(invoiceData.created_at).toLocaleDateString('es-CO') %></p>
+    </div>
+    <span class="badge invoice-status-<%= invoiceData.status %>" style="font-size:14px"><%= invoiceData.status %></span>
+  </div>
+</div>
+
+<div class="table-wrapper" style="margin-bottom:20px">
+  <table class="table">
+    <thead><tr><th>Descripción</th><th>Cant.</th><th>Precio Unit.</th><th>Subtotal</th></tr></thead>
+    <tbody>
+      <% invoiceData.items.forEach(item => { const isDisc = item.item_type === 'descuento'; const sub = item.quantity * item.unit_price; %>
+        <tr<%- isDisc ? ' class="discount-row"' : '' %>>
+          <td>
+            <%= item.description %>
+            <% if (item.item_type === 'magistral' && item.magistral_real_name) { %>
+              <br><span style="font-size:11px;color:var(--muted)" title="Nombre real del magistral (solo visible internamente)">(<%= item.magistral_real_name %>)</span>
+            <% } %>
+            <% if (Number(item.stock_shortage) > 0) { %>
+              <br><span class="badge badge-danger" title="Se facturó sin stock suficiente en inventario">Sin stock: faltaron <%= +Number(item.stock_shortage).toFixed(4) %></span>
+            <% } %>
+          </td>
+          <td><%= isDisc ? '' : item.quantity %></td>
+          <td><%= isDisc ? '' : '$' + Number(item.unit_price).toLocaleString('es-CO') %></td>
+          <td><%= (sub < 0 ? '-$' : '$') + Math.abs(sub).toLocaleString('es-CO') %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+    <tfoot>
+      <tr class="total-row"><td colspan="3" style="text-align:right">TOTAL</td><td>$<%= Number(invoiceData.total_amount).toLocaleString('es-CO') %></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="two-col" style="margin-bottom:24px">
+  <!-- Pagos registrados -->
+  <div>
+    <h3 style="margin-bottom:12px">Pagos Registrados</h3>
+    <% if (!invoiceData.payments.length) { %>
+      <p class="text-center" style="color:var(--muted)">Sin pagos aún.</p>
+    <% } else { %>
+      <div class="table-wrapper">
+        <table class="table">
+          <thead><tr><th>Método</th><th>Monto</th><th>Fecha</th><th>Registrado por</th></tr></thead>
+          <tbody>
+            <% invoiceData.payments.forEach(pay => { %>
+              <tr>
+                <td><%= pay.method %></td>
+                <td>$<%= Number(pay.amount).toLocaleString('es-CO') %></td>
+                <td><%= new Date(pay.paid_at).toLocaleDateString('es-CO') %></td>
+                <td><%= pay.registered_by_name %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Resumen -->
+  <div>
+    <h3 style="margin-bottom:12px">Resumen</h3>
+    <div class="payment-summary <%= invoiceData.totalPending <= 0 ? 'payment-summary-paid' : 'payment-summary-pending' %>">
+      <div class="summary-row"><span>Total</span><strong>$<%= Number(invoiceData.total_amount).toLocaleString('es-CO') %></strong></div>
+      <div class="summary-row"><span>Pagado</span><strong>$<%= invoiceData.totalPaid.toLocaleString('es-CO') %></strong></div>
+      <div class="summary-row summary-balance">
+        <span>Pendiente</span>
+        <strong>$<%= invoiceData.totalPending.toLocaleString('es-CO') %></strong>
+      </div>
+    </div>
+
+    <% if (invoiceData.status !== 'pagado') { %>
+      <div style="margin-top:16px;padding:16px;background:#fff;border:1px solid var(--border);border-radius:var(--radius)">
+        <h4 style="margin-bottom:12px">Registrar Pago</h4>
+        <form action="/facturas/<%= invoiceData.id %>/pagos" method="POST" novalidate>
+          <div class="form-group">
+            <label>Método</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label"><input type="radio" name="method" value="efectivo" required> Efectivo</label>
+              <label class="checkbox-label"><input type="radio" name="method" value="transferencia"> Transferencia</label>
+              <label class="checkbox-label"><input type="radio" name="method" value="datafono"> Datáfono</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="amount">Monto</label>
+            <input type="number" id="amount" name="amount" min="0.01" step="0.01"
+                   max="<%= invoiceData.totalPending %>"
+                   value="<%= invoiceData.totalPending.toFixed(2) %>" required>
+          </div>
+          <button type="submit" class="btn btn-success btn-block">Registrar Pago</button>
+        </form>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<div style="display:flex;gap:10px">
+  <a href="/facturas" class="btn">← Volver</a>
+  <a href="/facturas/<%= invoiceData.id %>/imprimir" class="btn" target="_blank">Imprimir Recibo</a>
+</div>

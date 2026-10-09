@@ -1,0 +1,158 @@
+<%
+  // Conserva los filtros actuales al cambiar solo el segmento desde los contadores
+  const qs = (overrides = {}) => {
+    const base = {
+      segment:     filters.segment,
+      type:        filters.type,
+      supplier_id: filters.supplierId,
+      search:      filters.search,
+      sort:        filters.sort === 'nombre' ? '' : filters.sort
+    };
+    const merged = Object.assign({}, base, overrides);
+    const parts = Object.keys(merged)
+      .filter(k => merged[k] !== '' && merged[k] !== null && merged[k] !== undefined)
+      .map(k => k + '=' + encodeURIComponent(merged[k]));
+    return '/productos' + (parts.length ? '?' + parts.join('&') : '');
+  };
+  const tiles = [
+    { key: '',            label: 'Todos',              count: stats.total },
+    { key: 'stock_ok',    label: 'Stock OK',           count: stats.stock_ok },
+    { key: 'bajo_minimo', label: 'Bajo mínimo',        count: stats.bajo_minimo, alert: true },
+    { key: 'sin_stock',   label: 'Sin stock',          count: stats.sin_stock,   alert: true },
+    { key: 'por_vencer',  label: 'Por vencer',         count: stats.por_vencer,  alert: true },
+    { key: 'vencidos',    label: 'Vencidos con stock', count: stats.vencidos,    alert: true },
+    { key: 'inactivos',   label: 'Inactivos',          count: stats.inactivos }
+  ];
+  const money = n => '$' + Math.round(Number(n || 0)).toLocaleString('es-CO');
+  const qty   = n => (+Number(n).toFixed(2)).toLocaleString('es-CO');
+  const totalValue = products.reduce((a, p) => a + Number(p.stock_value), 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+%>
+
+<div class="page-actions" style="justify-content:flex-end">
+  <a href="/productos/nuevo" class="btn btn-primary">+ Nuevo Producto</a>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+  <% tiles.forEach(t => { %>
+    <a href="<%= qs({ segment: t.key }) %>"
+       style="text-decoration:none;padding:8px 14px;border-radius:8px;border:1px solid <%= filters.segment === t.key ? '#1a56db' : '#e2e4e0' %>;background:<%= filters.segment === t.key ? '#eef3ff' : '#fff' %>;min-width:92px">
+      <span style="display:block;font-size:12px;color:#7a7d78"><%= t.label %></span>
+      <strong style="font-size:18px;<%= t.alert && t.count > 0 ? 'color:#c0392b' : '' %>"><%= t.count %></strong>
+    </a>
+  <% }) %>
+</div>
+
+<form method="GET" action="/productos" class="filter-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:20px">
+  <div>
+    <label class="form-label">Segmento</label>
+    <select name="segment" class="form-control" style="width:190px">
+      <% tiles.forEach(t => { %>
+        <option value="<%= t.key %>" <%= filters.segment === t.key ? 'selected' : '' %>><%= t.key ? t.label : '— Todos —' %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Tipo</label>
+    <select name="type" class="form-control" style="width:150px">
+      <option value="">— Todos —</option>
+      <option value="insumo"    <%= filters.type === 'insumo'    ? 'selected' : '' %>>Insumos</option>
+      <option value="magistral" <%= filters.type === 'magistral' ? 'selected' : '' %>>Magistrales</option>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Proveedor</label>
+    <select name="supplier_id" class="form-control" style="width:190px">
+      <option value="">— Cualquiera —</option>
+      <% suppliers.forEach(s => { %>
+        <option value="<%= s.id %>" <%= filters.supplierId == s.id ? 'selected' : '' %>><%= s.name %><%= s.is_active ? '' : ' (inactivo)' %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Buscar</label>
+    <input type="text" name="search" value="<%= filters.search %>" class="form-control" style="width:230px" placeholder="SKU, nombre o fabricante">
+  </div>
+  <div>
+    <label class="form-label">Orden</label>
+    <select name="sort" class="form-control" style="width:190px">
+      <option value="nombre"      <%= filters.sort === 'nombre'      ? 'selected' : '' %>>Nombre (A–Z)</option>
+      <option value="stock"       <%= filters.sort === 'stock'       ? 'selected' : '' %>>Menor stock primero</option>
+      <option value="vencimiento" <%= filters.sort === 'vencimiento' ? 'selected' : '' %>>Vencimiento más próximo</option>
+      <option value="valor"       <%= filters.sort === 'valor'       ? 'selected' : '' %>>Mayor valor en inventario</option>
+    </select>
+  </div>
+  <div>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+    <a href="/productos" class="btn" style="margin-left:6px">Limpiar</a>
+  </div>
+</form>
+
+<div style="margin-bottom:12px;color:#7a7d78;font-size:13px">
+  <strong><%= products.length %></strong> producto(s) encontrado(s)
+  <% if (products.length) { %> · Valor en inventario <strong><%= money(totalValue) %></strong><% } %>
+</div>
+
+<div class="table-wrapper">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th>Nombre Genérico</th>
+        <th>Nombre Comercial</th>
+        <th>Unidad</th>
+        <th>Stock Actual</th>
+        <th>Mínimo</th>
+        <th>Próx. vencimiento</th>
+        <th>Valor inventario</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (products.length === 0) { %>
+        <tr><td colspan="10" class="text-center">No hay productos con estos filtros.</td></tr>
+      <% } %>
+      <% products.forEach(p => { %>
+        <%
+          const stock = Number(p.current_stock);
+          const min   = Number(p.min_stock);
+          let statusBadge = 'badge-active';
+          let statusLabel = 'OK';
+          if (stock <= 0)                   { statusBadge = 'badge-danger';  statusLabel = 'Sin stock'; }
+          else if (min > 0 && stock <= min) { statusBadge = 'badge-warning'; statusLabel = 'Bajo mínimo'; }
+
+          let expiryHtml = '—';
+          if (p.next_expiry) {
+            const exp  = new Date(p.next_expiry);
+            const days = Math.round((exp - today) / 86400000);
+            const cls  = days < 0 ? 'badge-danger' : days <= Number(p.expiry_alert_days) ? 'badge-warning' : '';
+            const txt  = exp.toLocaleDateString('es-CO');
+            expiryHtml = cls ? `<span class="badge ${cls}" title="${days < 0 ? 'Vencido hace ' + (-days) + ' días' : 'Vence en ' + days + ' días'}">${txt}</span>` : txt;
+          }
+        %>
+        <tr class="<%= p.is_active ? '' : 'row-inactive' %>">
+          <td><code><%= p.sku %></code></td>
+          <td><strong><%= p.generic_name %></strong><% if (p.is_magistral) { %> <span class="badge badge-warning">Magistral</span><% } %></td>
+          <td><%= p.commercial_name || '—' %></td>
+          <td><%= p.consumption_unit %></td>
+          <td><%= qty(stock) %></td>
+          <td><%= qty(min) %></td>
+          <td><%- expiryHtml %></td>
+          <td><%= Number(p.stock_value) > 0 ? money(p.stock_value) : '—' %></td>
+          <td><span class="badge <%= statusBadge %>"><%= statusLabel %></span></td>
+          <td class="actions">
+            <a href="/inventario/producto/<%= p.id %>/lotes" class="btn btn-sm">Lotes</a>
+            <a href="/productos/<%= p.id %>/editar" class="btn btn-sm">Editar</a>
+            <form action="/productos/<%= p.id %>/toggle-activo" method="POST" style="display:inline">
+              <button type="submit" class="btn btn-sm <%= p.is_active ? 'btn-danger' : 'btn-success' %>"
+                      onclick="return confirm('<%= p.is_active ? 'Desactivar' : 'Activar' %> este producto?')">
+                <%= p.is_active ? 'Desactivar' : 'Activar' %>
+              </button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

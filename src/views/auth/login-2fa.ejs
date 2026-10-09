@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación en dos pasos — BEMI</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      <div class="login-logo-mark">B</div>
+    </div>
+    <h1 class="login-title">Verificación en dos pasos</h1>
+    <p class="login-subtitle">Ingresa el código de tu app de autenticación</p>
+
+    <%- include('../partials/flash') %>
+
+    <form action="/login/2fa" method="POST" novalidate>
+      <div class="form-group">
+        <label for="token">Código</label>
+        <input type="text" id="token" name="token" required
+               inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"
+               placeholder="000000" autofocus>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Verificar</button>
+    </form>
+    <p style="text-align:center;margin-top:16px">
+      <a href="/login">← Volver a iniciar sesión</a>
+    </p>
+  </div>
+</body>
+</html>

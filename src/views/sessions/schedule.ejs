@@ -1,0 +1,69 @@
+<div class="info-box" style="margin-bottom:20px">
+  <% if (sessionData.is_control) { %><strong>Control</strong><% } else { %>Sesión <strong>#<%= sessionData.session_number %></strong><% } %> — Paciente: <strong><%= sessionData.patient_name %></strong>
+</div>
+
+<form action="/sesiones/<%= sessionData.id %>/agendar" method="POST" class="form-card" novalidate id="scheduleForm">
+
+  <input type="hidden" id="scheduled_date" name="scheduled_date">
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="pick_date">Fecha *</label>
+      <input type="date" id="pick_date" required>
+    </div>
+    <div class="form-group">
+      <label for="pick_time">Hora *</label>
+      <select id="pick_time" required></select>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <a href="/planes/<%= sessionData.patient_treatment_id %>" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary">Agendar Sesión</button>
+  </div>
+</form>
+
+<script>
+(function () {
+  const timeSelect = document.getElementById('pick_time');
+  const dateInput  = document.getElementById('pick_date');
+  const hidden     = document.getElementById('scheduled_date');
+
+  // Generar slots cada 30 min de 06:00 a 21:00
+  for (let h = 6; h <= 21; h++) {
+    ['00', '30'].forEach(m => {
+      if (h === 21 && m === '30') return;
+      const label = `${String(h).padStart(2,'0')}:${m}`;
+      const opt   = document.createElement('option');
+      opt.value   = label;
+      opt.textContent = label;
+      timeSelect.appendChild(opt);
+    });
+  }
+
+  // Pre-llenar si la sesión ya tenía fecha agendada
+  <% if (sessionData.scheduled_date) { %>
+    const existing = new Date('<%= new Date(sessionData.scheduled_date).toISOString() %>');
+    dateInput.value = existing.toISOString().slice(0, 10);
+    const hh  = String(existing.getHours()).padStart(2, '0');
+    const mm  = existing.getMinutes() >= 30 ? '30' : '00';
+    timeSelect.value = `${hh}:${mm}`;
+  <% } else { %>
+    // Por defecto: mañana a las 09:00
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    dateInput.value  = tomorrow.toISOString().slice(0, 10);
+    timeSelect.value = '09:00';
+  <% } %>
+
+  // Combinar fecha + hora en el hidden antes de enviar
+  document.getElementById('scheduleForm').addEventListener('submit', function (e) {
+    if (!dateInput.value || !timeSelect.value) {
+      e.preventDefault();
+      alert('Seleccioná fecha y hora.');
+      return;
+    }
+    hidden.value = `${dateInput.value}T${timeSelect.value}`;
+  });
+})();
+</script>

@@ -1,0 +1,54 @@
+<div class="page-actions">
+  <a href="/inventario" class="btn">← Volver al inventario</a>
+  <a href="/inventario/ingresos/nuevo" class="btn btn-primary">+ Registrar Ingreso</a>
+</div>
+
+<div class="info-box" style="margin-bottom:20px">
+  <strong><%= product.generic_name %></strong>
+  <% if (product.commercial_name) { %> — <%= product.commercial_name %><% } %>
+  &nbsp;|&nbsp; SKU: <code><%= product.sku %></code>
+  &nbsp;|&nbsp; Stock actual: <strong><%= Number(product.current_stock).toFixed(2) %> <%= product.consumption_unit %></strong>
+</div>
+
+<div class="table-wrapper">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Lote</th>
+        <th>Vencimiento</th>
+        <th>Cant. Compra</th>
+        <th>Cant. Consumo</th>
+        <th>Precio / U.C.</th>
+        <th>Costo Total</th>
+        <th>Restante</th>
+        <th>Proveedor</th>
+        <th>Fecha Ingreso</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (entries.length === 0) { %>
+        <tr><td colspan="9" class="text-center">No hay lotes registrados para este producto.</td></tr>
+      <% } %>
+      <% entries.forEach(e => { %>
+        <%
+          const remaining = Number(e.remaining_quantity);
+          const isExpired = e.expiry_date && new Date(e.expiry_date) < new Date();
+        %>
+        <tr class="<%= remaining <= 0 ? 'row-inactive' : '' %>">
+          <td><%= e.lot_number || '—' %></td>
+          <td class="<%= isExpired ? 'text-danger' : '' %>">
+            <%= e.expiry_date ? new Date(e.expiry_date).toLocaleDateString('es-CO') : '—' %>
+            <% if (isExpired) { %><span class="badge badge-danger">Vencido</span><% } %>
+          </td>
+          <td><%= Number(e.purchase_quantity).toFixed(2) %></td>
+          <td><%= Number(e.consumption_quantity).toFixed(2) %></td>
+          <td>$<%= Number(e.purchase_price).toLocaleString('es-CO') %></td>
+          <td>$<%= Number(e.total_cost).toLocaleString('es-CO') %></td>
+          <td><strong><%= remaining.toFixed(2) %></strong></td>
+          <td><%= e.supplier_name || '—' %></td>
+          <td><%= e.entry_date ? new Date(e.entry_date).toLocaleDateString('es-CO') : '—' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

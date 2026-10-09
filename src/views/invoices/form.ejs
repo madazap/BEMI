@@ -1,0 +1,190 @@
+<% if (preloaded) { %>
+<div class="info-box" style="margin-bottom:16px">
+  Creando factura desde <strong>Cotización #<%= preloaded.id %></strong> — <%= preloaded.patient_name %>
+</div>
+<% } %>
+
+<form action="/facturas" method="POST" class="form-card form-wide" novalidate>
+  <% if (quotationId) { %>
+    <input type="hidden" name="quotation_id" value="<%= quotationId %>">
+    <input type="hidden" name="patient_id"   value="<%= preloaded.patient_id %>">
+  <% } %>
+
+  <% if (!preloaded) { %>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Paciente *</label>
+      <%- include('../partials/patient-picker', { required: true }) %>
+    </div>
+    <div class="form-group">
+      <label for="patient_treatment_id">Plan de tratamiento (opcional)</label>
+      <select id="patient_treatment_id" name="patient_treatment_id">
+        <option value="">— Seleccionar primero paciente —</option>
+      </select>
+    </div>
+  </div>
+  <% } else { %>
+    <input type="hidden" name="patient_treatment_id" value="">
+  <% } %>
+
+  <% if (!preloaded) { %>
+  <div class="form-section">
+    <div class="section-header" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+      <h4>Ítems</h4>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn btn-sm" id="btnAddFree">+ Línea libre</button>
+        <button type="button" class="btn btn-sm btn-primary" id="btnAddItem">+ Agregar ítems</button>
+      </div>
+    </div>
+    <div class="table-wrapper" style="margin-bottom:8px">
+      <table class="table">
+        <thead>
+          <tr><th>Ítem</th><th>Descripción</th><th>Cant.</th><th>Precio Unit.</th><th>Subtotal</th><th></th></tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+        <tbody id="itemsEmpty">
+          <tr><td colspan="6" class="text-muted" style="text-align:center;padding:18px">
+            Aún no hay ítems. Usa <strong>+ Agregar ítems</strong> para buscar tratamientos o magistrales, o <strong>+ Línea libre</strong> para un concepto manual.
+          </td></tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row"><td colspan="4" style="text-align:right">TOTAL</td><td id="footTotal" colspan="2">$0</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  <% } else { %>
+    <!-- Items pre-cargados de cotización -->
+    <% preloaded.items.forEach(item => { %>
+      <input type="hidden" name="item_type"        value="<%= item.item_type %>">
+      <input type="hidden" name="item_description" value="<%= item.description %>">
+      <input type="hidden" name="item_quantity"    value="<%= item.quantity %>">
+      <input type="hidden" name="item_unit_price"  value="<%= item.unit_price %>">
+      <input type="hidden" name="item_product_id"  value="<%= item.product_id || '' %>">
+      <input type="hidden" name="item_session_id"  value="">
+    <% }) %>
+    <div class="table-wrapper" style="margin-bottom:16px">
+      <table class="table">
+        <thead><tr><th>Descripción</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr></thead>
+        <tbody>
+          <% preloaded.invoiceLines.forEach(item => { const sub = item.quantity * item.unit_price; %>
+            <tr<%- item.item_type === 'descuento' ? ' class="discount-row"' : '' %>>
+              <td>
+                <% if (item.item_type === 'magistral') { %>
+                  <%= MAGISTRAL_LABEL %>
+                  <% if (item.real_name) { %><br><span style="font-size:11px;color:#7a7d78">(<%= item.real_name %>)</span><% } %>
+                <% } else { %>
+                  <%= item.description %>
+                <% } %>
+              </td>
+              <td><%= item.item_type === 'descuento' ? '' : item.quantity %></td>
+              <td><%= item.item_type === 'descuento' ? '' : '$' + Number(item.unit_price).toLocaleString('es-CO') %></td>
+              <td><%= (sub < 0 ? '-$' : '$') + Math.abs(sub).toLocaleString('es-CO') %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="3" style="text-align:right">TOTAL</td>
+            <td>$<%= Number(preloaded.total).toLocaleString('es-CO') %></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  <% } %>
+
+  <div class="form-actions">
+    <a href="/facturas" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary">Crear Factura</button>
+  </div>
+</form>
+
+<% if (!preloaded) { %>
+<%- include('../partials/item-picker', { treatments, magistrals }) %>
+
+<script>
+(function () {
+  async function loadPlans(patientId) {
+    const sel = document.getElementById('patient_treatment_id');
+    sel.innerHTML = '<option value="">Cargando...</option>';
+    if (!patientId) { sel.innerHTML = '<option value="">—</option>'; return; }
+    const plans = await fetch(`/facturas/api/pacientes/${patientId}/planes`).then(r => r.json());
+    sel.innerHTML = '<option value="">Sin plan asociado</option>' +
+      plans.map(p => `<option value="${p.id}">${p.treatment_name}</option>`).join('');
+  }
+  document.getElementById('patient_id').addEventListener('change', e => loadPlans(e.target.value));
+
+  const MAGISTRAL_LABEL = <%- JSON.stringify(MAGISTRAL_LABEL) %>;
+  const esc   = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const money = n => '$' + Number(n || 0).toLocaleString('es-CO');
+  const body  = document.getElementById('itemsBody');
+
+  // it = { item_type, product_id, treatment_id, name, description, unit_price }
+  function addRow(it) {
+    const isMag = it.item_type === 'magistral';
+    const tr = document.createElement('tr');
+    tr.className = 'item-row';
+    if (it.treatment_id) tr.dataset.treatmentId = it.treatment_id;
+    if (isMag)           tr.dataset.productId   = it.product_id;
+    const label = isMag ? 'Magistral' : (it.treatment_id ? 'Sesión' : 'Libre');
+    tr.innerHTML = `
+      <td>
+        <input type="hidden" name="item_type"       value="${isMag ? 'magistral' : 'sesion'}">
+        <input type="hidden" name="item_product_id" value="${esc(isMag ? it.product_id : '')}">
+        <input type="hidden" name="item_session_id" value="">
+        <span class="badge badge-type">${label}</span>
+        ${it.name ? `<div class="item-name">${esc(it.name)}</div>` : ''}
+      </td>
+      <td><input type="text" name="item_description" style="min-width:160px" placeholder="Descripción"
+                 value="${esc(isMag ? MAGISTRAL_LABEL : (it.description || ''))}" ${isMag ? `readonly title="Por norma, el magistral se factura como ${esc(MAGISTRAL_LABEL)}"` : ''}></td>
+      <td><input type="number" name="item_quantity" value="1" min="1" step="0.01" style="width:60px" class="qty-inp"></td>
+      <td><input type="number" name="item_unit_price" value="${esc(it.unit_price || 0)}" min="0" step="100" style="width:110px" class="price-inp"></td>
+      <td class="sub-cell">$0</td>
+      <td><button type="button" class="btn btn-sm btn-danger btn-remove-item">✕</button></td>
+    `;
+    body.appendChild(tr);
+    recalc();
+    return tr;
+  }
+
+  function addFromCatalog(c) {
+    // Si el ítem ya está en la factura, solo sube la cantidad
+    const existing = c.kind === 'magistral'
+      ? body.querySelector(`tr[data-product-id="${c.id}"]`)
+      : body.querySelector(`tr[data-treatment-id="${c.id}"]`);
+    if (existing) {
+      const qty = existing.querySelector('.qty-inp');
+      qty.value = (parseFloat(qty.value) || 0) + 1;
+      recalc();
+      return;
+    }
+    addRow(c.kind === 'magistral'
+      ? { item_type: 'magistral', product_id: c.id, name: c.name, unit_price: c.price }
+      : { item_type: 'sesion', treatment_id: c.id, name: c.name, description: c.name, unit_price: c.price });
+  }
+
+  document.getElementById('btnAddItem').addEventListener('click', () => window.openItemPicker(addFromCatalog));
+  document.getElementById('btnAddFree').addEventListener('click', () => {
+    addRow({ item_type: 'sesion' }).querySelector('input[name="item_description"]').focus();
+  });
+  body.addEventListener('click', e => {
+    if (e.target.classList.contains('btn-remove-item')) { e.target.closest('tr').remove(); recalc(); }
+  });
+  body.addEventListener('input', recalc);
+
+  function recalc() {
+    let total = 0;
+    const rows = body.querySelectorAll('tr.item-row');
+    rows.forEach(row => {
+      const q = parseFloat(row.querySelector('.qty-inp').value)   || 0;
+      const p = parseFloat(row.querySelector('.price-inp').value) || 0;
+      row.querySelector('.sub-cell').textContent = money(q * p);
+      total += q * p;
+    });
+    document.getElementById('itemsEmpty').hidden = rows.length > 0;
+    document.getElementById('footTotal').textContent = money(total);
+  }
+  recalc();
+})();
+</script>
+<% } %>

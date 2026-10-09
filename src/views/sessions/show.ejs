@@ -1,0 +1,56 @@
+<div class="patient-card" style="margin-bottom:20px">
+  <div class="patient-card-header">
+    <div>
+      <p class="text-muted">Paciente: <a href="/pacientes/<%= sessionData.patient_id %>"><%= sessionData.patient_name %></a></p>
+      <p>Tratamiento: <strong><%= sessionData.treatment_name %></strong></p>
+    </div>
+    <span class="badge session-status-<%= sessionData.status %>" style="font-size:13px"><%= sessionData.status %></span>
+  </div>
+  <div class="two-col" style="margin-top:16px">
+    <div><span class="field-label">Fecha agendada</span><span><%= sessionData.scheduled_date ? new Date(sessionData.scheduled_date).toLocaleString('es-CO') : '—' %></span></div>
+    <div><span class="field-label">Fecha realizada</span><span><%= sessionData.performed_date ? new Date(sessionData.performed_date).toLocaleString('es-CO') : '—' %></span></div>
+    <div><span class="field-label">Horas profesional</span><span><%= sessionData.professional_hours ? sessionData.professional_hours + ' h' : '—' %></span></div>
+    <div><span class="field-label">Atendida por</span><span><%= sessionData.attended_by_name || '—' %></span></div>
+  </div>
+  <% if (sessionData.notes) { %>
+    <div style="margin-top:12px"><span class="field-label">Notas</span><p><%= sessionData.notes %></p></div>
+  <% } %>
+</div>
+
+<% if (products.length > 0) { %>
+  <div class="section-block">
+    <h3>Productos Consumidos</h3>
+    <div class="table-wrapper" style="margin-top:12px">
+      <table class="table">
+        <thead><tr><th>Producto</th><th>Origen</th><th>Lote</th><th>Cantidad</th><th>Unidad</th></tr></thead>
+        <tbody>
+          <% products.forEach(p => { %>
+            <tr>
+              <td><%= p.generic_name %><% if (p.commercial_name) { %> (<%= p.commercial_name %>)<% } %></td>
+              <td><span class="badge <%= p.is_extra ? 'badge-warning' : 'badge-type' %>"><%= p.is_extra ? 'Adicional' : 'Tratamiento' %></span></td>
+              <td><% if (p.stock_entry_id) { %><%= p.lot_number || '—' %><% } else { %><span class="badge badge-danger">Sin stock</span><% } %></td>
+              <td><%= +Number(p.quantity).toFixed(4) %></td>
+              <td><%= p.consumption_unit %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>
+
+<% if (snapshot) { %>
+  <div class="snapshot-box">
+    <h4>Margen de la Sesión</h4>
+    <div class="two-col">
+      <div><span class="field-label">Precio venta</span><span>$<%= Number(snapshot.sale_price_at_time).toLocaleString('es-CO') %></span></div>
+      <div><span class="field-label">Costo ejecución</span><span>$<%= Number(snapshot.execution_cost_at_time).toLocaleString('es-CO') %></span></div>
+      <div><span class="field-label">Margen</span><span class="<%= Number(snapshot.margin_at_time) >= 0 ? '' : 'text-danger' %>">$<%= Number(snapshot.margin_at_time).toLocaleString('es-CO') %></span></div>
+      <div><span class="field-label">Registrado</span><span><%= new Date(snapshot.recorded_at).toLocaleString('es-CO') %></span></div>
+    </div>
+  </div>
+<% } %>
+
+<div style="margin-top:20px;display:flex;gap:10px">
+  <a href="/planes/<%= sessionData.patient_treatment_id %>" class="btn">← Volver al plan</a>
+</div>

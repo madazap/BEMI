@@ -1,0 +1,48 @@
+<div class="page-actions">
+  <a href="/gastos" class="btn">← Volver a Gastos</a>
+</div>
+
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-top:4px">
+
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr><th>Categoría</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <% if (categories.length === 0) { %>
+          <tr><td colspan="3" class="text-center">No hay categorías registradas.</td></tr>
+        <% } %>
+        <% categories.forEach(c => { %>
+          <tr class="<%= c.is_active ? '' : 'row-inactive' %>">
+            <td><%= c.name %></td>
+            <td>
+              <span class="badge <%= c.is_active ? 'badge-active' : 'badge-inactive' %>">
+                <%= c.is_active ? 'Activa' : 'Inactiva' %>
+              </span>
+            </td>
+            <td>
+              <form action="/gastos/categorias/<%= c.id %>/toggle" method="POST" style="display:inline">
+                <button type="submit" class="btn btn-sm <%= c.is_active ? 'btn-danger' : 'btn-success' %>">
+                  <%= c.is_active ? 'Desactivar' : 'Activar' %>
+                </button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="form-card" style="max-width:none;height:fit-content">
+    <h3 style="margin-bottom:16px">Nueva Categoría</h3>
+    <form action="/gastos/categorias" method="POST">
+      <div class="form-group">
+        <label for="name">Nombre</label>
+        <input type="text" id="name" name="name" required placeholder="Ej: Arriendo, Servicios">
+      </div>
+      <button type="submit" class="btn btn-primary">Crear</button>
+    </form>
+  </div>
+
+</div>

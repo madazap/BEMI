@@ -1,0 +1,168 @@
+<form action="/cotizaciones/<%= quotationData ? quotationData.id : '' %>" method="POST" class="form-card form-wide" novalidate>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Paciente *</label>
+      <%- include('../partials/patient-picker', {
+            selected: quotationData ? { id: quotationData.patient_id, full_name: quotationData.patient_name,
+                                        document_type: quotationData.patient_document_type,
+                                        document_number: quotationData.patient_document } : null,
+            required: true
+          }) %>
+    </div>
+    <div class="form-group">
+      <label>Descuento global</label>
+      <div style="display:flex;gap:8px">
+        <select name="discount_type" id="discountType" style="width:auto">
+          <option value="">Sin descuento</option>
+          <option value="porcentaje" <%= quotationData && quotationData.discount_type==='porcentaje' ? 'selected':'' %>>%</option>
+          <option value="valor_fijo" <%= quotationData && quotationData.discount_type==='valor_fijo' ? 'selected':'' %>>Valor fijo</option>
+        </select>
+        <input type="number" name="discount_value" id="discountValue" min="0" step="0.01" placeholder="0"
+               value="<%= quotationData ? quotationData.discount_value : 0 %>" style="width:100px">
+      </div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="notes">Notas</label>
+    <textarea id="notes" name="notes" rows="2"><%= quotationData ? quotationData.notes || '' : '' %></textarea>
+  </div>
+
+  <div class="form-section">
+    <div class="section-header" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+      <h4>Ítems</h4>
+      <button type="button" class="btn btn-sm btn-primary" id="btnAddItem">+ Agregar ítems</button>
+    </div>
+    <div class="table-wrapper" style="margin-bottom:8px">
+      <table class="table" id="itemsTable">
+        <thead>
+          <tr>
+            <th>Ítem</th><th>Descripción</th>
+            <th>Cant.</th><th>Precio Unit.</th>
+            <th>Dto. tipo</th><th>Dto. valor</th>
+            <th>Subtotal</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+        <tbody id="itemsEmpty">
+          <tr><td colspan="8" class="text-muted" style="text-align:center;padding:18px">
+            Aún no hay ítems. Usa <strong>+ Agregar ítems</strong> para buscar tratamientos o magistrales.
+          </td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td colspan="6" style="text-align:right;font-weight:600">Subtotal</td><td id="footSubtotal" colspan="2">$0</td></tr>
+          <tr><td colspan="6" style="text-align:right">Descuento global</td><td id="footDiscount" colspan="2">$0</td></tr>
+          <tr class="total-row"><td colspan="6" style="text-align:right">TOTAL</td><td id="footTotal" colspan="2">$0</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <a href="/cotizaciones" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary"><%= quotationData ? 'Guardar cambios' : 'Crear Cotización' %></button>
+  </div>
+</form>
+
+<%- include('../partials/item-picker', { treatments, magistrals }) %>
+
+<script>
+(function () {
+  const initialItems = <%- JSON.stringify(quotationData ? quotationData.items.map(it => ({
+    item_type: it.item_type, treatment_id: it.treatment_id, product_id: it.product_id,
+    name: it.item_type === 'sesion' ? it.treatment_name : it.product_name,
+    description: it.description, quantity: it.quantity, unit_price: it.unit_price,
+    discount_type: it.discount_type, discount_value: it.discount_value
+  })) : []) %>;
+
+  const esc   = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const money = n => '$' + Number(n || 0).toLocaleString('es-CO');
+
+  const body  = document.getElementById('itemsBody');
+
+  // ── Filas de la cotización ────────────────────────────────
+  function addRow(it) {
+    const tr = document.createElement('tr');
+    tr.className = 'item-row';
+    const label = it.item_type === 'magistral' ? 'Magistral' : 'Sesión';
+    const dt = it.discount_type || '';
+    tr.innerHTML = `
+      <td>
+        <input type="hidden" name="item_type"    value="${esc(it.item_type)}">
+        <input type="hidden" name="treatment_id" value="${esc(it.treatment_id || '')}">
+        <input type="hidden" name="product_id"   value="${esc(it.product_id || '')}">
+        <span class="badge badge-type">${label}</span>
+        <div class="item-name">${esc(it.name || it.description)}</div>
+      </td>
+      <td><input type="text" name="item_description" value="${esc(it.description)}" style="min-width:140px"></td>
+      <td><input type="number" name="item_quantity" value="${esc(it.quantity ?? 1)}" min="1" step="0.01" style="width:60px" class="qty-input"></td>
+      <td><input type="number" name="item_unit_price" value="${esc(it.unit_price ?? 0)}" min="0" step="100" style="width:100px" class="price-input"></td>
+      <td><select name="item_discount_type" class="item-disc-type" style="width:80px">
+        <option value="">—</option>
+        <option value="porcentaje" ${dt === 'porcentaje' ? 'selected' : ''}>%</option>
+        <option value="valor_fijo" ${dt === 'valor_fijo' ? 'selected' : ''}>Fijo</option>
+      </select></td>
+      <td><input type="number" name="item_discount_value" value="${esc(it.discount_value ?? 0)}" min="0" step="0.01" style="width:70px" class="item-disc-val"></td>
+      <td class="subtotal-cell">$0</td>
+      <td><button type="button" class="btn btn-sm btn-danger btn-remove-item">✕</button></td>
+    `;
+    body.appendChild(tr);
+    recalcAll();
+  }
+
+  function addFromCatalog(c) {
+    // Si el ítem ya está en la cotización, solo sube la cantidad
+    const field = c.kind === 'sesion' ? 'treatment_id' : 'product_id';
+    const existing = body.querySelector(`input[name="${field}"][value="${c.id}"]`);
+    if (existing) {
+      const qty = existing.closest('tr').querySelector('.qty-input');
+      qty.value = (parseFloat(qty.value) || 0) + 1;
+      recalcAll();
+    } else {
+      addRow({
+        item_type:    c.kind,
+        treatment_id: c.kind === 'sesion'    ? c.id : '',
+        product_id:   c.kind === 'magistral' ? c.id : '',
+        name: c.name, description: c.name, quantity: 1, unit_price: c.price
+      });
+    }
+  }
+
+  body.addEventListener('click', e => {
+    if (e.target.classList.contains('btn-remove-item')) { e.target.closest('tr').remove(); recalcAll(); }
+  });
+  body.addEventListener('input', recalcAll);
+  body.addEventListener('change', recalcAll);
+  document.getElementById('discountType').addEventListener('change', recalcAll);
+  document.getElementById('discountValue').addEventListener('input', recalcAll);
+
+  function recalcAll() {
+    let subtotal = 0;
+    const rows = body.querySelectorAll('tr.item-row');
+    rows.forEach(row => {
+      const qty       = parseFloat(row.querySelector('.qty-input').value)   || 0;
+      const price     = parseFloat(row.querySelector('.price-input').value) || 0;
+      const dType     = row.querySelector('.item-disc-type').value;
+      const dVal      = parseFloat(row.querySelector('.item-disc-val').value) || 0;
+      const lineTotal = qty * price;
+      const lineDisc  = dType === 'porcentaje' ? lineTotal * dVal / 100 : dType === 'valor_fijo' ? dVal : 0;
+      const net       = lineTotal - lineDisc;
+      row.querySelector('.subtotal-cell').textContent = money(net);
+      subtotal += net;
+    });
+    document.getElementById('itemsEmpty').hidden = rows.length > 0;
+    const gType = document.getElementById('discountType').value;
+    const gVal  = parseFloat(document.getElementById('discountValue').value) || 0;
+    const gDisc = gType === 'porcentaje' ? subtotal * gVal / 100 : gType === 'valor_fijo' ? gVal : 0;
+    document.getElementById('footSubtotal').textContent = money(subtotal);
+    document.getElementById('footDiscount').textContent = money(gDisc);
+    document.getElementById('footTotal').textContent    = money(subtotal - gDisc);
+  }
+
+  document.getElementById('btnAddItem').addEventListener('click', () => window.openItemPicker(addFromCatalog));
+
+  initialItems.forEach(addRow);
+  recalcAll();
+})();
+</script>

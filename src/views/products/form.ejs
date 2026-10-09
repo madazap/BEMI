@@ -1,0 +1,121 @@
+<form action="/productos/<%= product ? product.id : '' %>" method="POST" class="form-card form-wide" novalidate>
+
+  <fieldset class="form-section">
+    <legend>Identificación</legend>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="sku">SKU *</label>
+        <input type="text" id="sku" name="sku" required
+               value="<%= product ? product.sku : '' %>" placeholder="Ej: PROD-001">
+      </div>
+      <div class="form-group">
+        <label for="generic_name">Nombre Genérico *</label>
+        <input type="text" id="generic_name" name="generic_name" required
+               value="<%= product ? product.generic_name : '' %>">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="commercial_name">Nombre Comercial</label>
+        <input type="text" id="commercial_name" name="commercial_name"
+               value="<%= product ? (product.commercial_name || '') : '' %>">
+      </div>
+      <div class="form-group">
+        <label for="presentation">Presentación</label>
+        <input type="text" id="presentation" name="presentation"
+               value="<%= product ? (product.presentation || '') : '' %>" placeholder="Ej: Frasco 500ml">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="concentration">Concentración</label>
+        <input type="text" id="concentration" name="concentration"
+               value="<%= product ? (product.concentration || '') : '' %>" placeholder="Ej: 2%">
+      </div>
+      <div class="form-group">
+        <label for="manufacturer">Fabricante</label>
+        <input type="text" id="manufacturer" name="manufacturer"
+               value="<%= product ? (product.manufacturer || '') : '' %>">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="sanitary_registry">Registro Sanitario</label>
+      <input type="text" id="sanitary_registry" name="sanitary_registry"
+             value="<%= product ? (product.sanitary_registry || '') : '' %>">
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend>Unidades y Stock</legend>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="purchase_unit">Unidad de Compra *</label>
+        <input type="text" id="purchase_unit" name="purchase_unit" required
+               value="<%= product ? product.purchase_unit : '' %>" placeholder="Ej: Caja">
+      </div>
+      <div class="form-group">
+        <label for="consumption_unit">Unidad de Consumo *</label>
+        <input type="text" id="consumption_unit" name="consumption_unit" required
+               value="<%= product ? product.consumption_unit : '' %>" placeholder="Ej: Ampolla">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="conversion_factor">Factor de Conversión *
+          <small>(unidades de consumo por unidad de compra)</small>
+        </label>
+        <input type="number" id="conversion_factor" name="conversion_factor" required
+               min="0.0001" step="0.0001"
+               value="<%= product ? product.conversion_factor : '1' %>">
+      </div>
+      <div class="form-group">
+        <label for="min_stock">Stock Mínimo (unidades consumo) *</label>
+        <input type="number" id="min_stock" name="min_stock" required
+               min="0" step="0.01"
+               value="<%= product ? product.min_stock : '0' %>">
+      </div>
+    </div>
+    <div class="form-group" style="max-width:240px">
+      <label for="expiry_alert_days">Días de Alerta por Vencimiento *</label>
+      <input type="number" id="expiry_alert_days" name="expiry_alert_days" required
+             min="1" step="1"
+             value="<%= product ? product.expiry_alert_days : '30' %>">
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend>Fórmula Magistral</legend>
+    <label class="checkbox-label">
+      <input type="checkbox" id="is_magistral" name="is_magistral"
+             <%= product && product.is_magistral ? 'checked' : '' %>>
+      Este producto es una fórmula magistral
+    </label>
+    <div id="magistral-fields" style="display:<%= product && product.is_magistral ? 'flex' : 'none' %>; flex-wrap:wrap; gap:16px; margin-top:12px;">
+      <div class="form-group">
+        <label for="sale_price">Precio de Venta</label>
+        <input type="number" id="sale_price" name="sale_price"
+               min="0" step="0.01"
+               value="<%= product ? (product.sale_price || '') : '' %>">
+      </div>
+      <div class="form-group">
+        <label for="acquisition_price">Precio de Adquisición</label>
+        <input type="number" id="acquisition_price" name="acquisition_price"
+               min="0" step="0.01"
+               value="<%= product ? (product.acquisition_price || '') : '' %>">
+      </div>
+    </div>
+  </fieldset>
+
+  <div class="form-actions">
+    <a href="/productos" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary">
+      <%= product ? 'Guardar cambios' : 'Crear producto' %>
+    </button>
+  </div>
+</form>
+
+<script>
+  document.getElementById('is_magistral').addEventListener('change', function () {
+    document.getElementById('magistral-fields').style.display = this.checked ? 'flex' : 'none';
+  });
+</script>

@@ -1,0 +1,99 @@
+<div class="page-actions">
+  <a href="/inventario/ingresos/nuevo" class="btn btn-primary">+ Registrar Ingreso</a>
+  <a href="/inventario/salidas/nuevo" class="btn">Registrar Salida</a>
+  <a href="/inventario/movimientos" class="btn">Movimientos</a>
+</div>
+
+<div class="alert-cards">
+  <div class="alert-card alert-card-warning">
+    <div class="alert-card-number"><%= lowStockAlerts.length %></div>
+    <div class="alert-card-label">Productos bajo mínimo</div>
+  </div>
+  <div class="alert-card alert-card-danger">
+    <div class="alert-card-number"><%= expiryAlerts.length %></div>
+    <div class="alert-card-label">Lotes por vencer</div>
+  </div>
+</div>
+
+<% if (lowStockAlerts.length > 0) { %>
+<div class="section-title">Alertas de Stock Bajo</div>
+<div class="table-wrapper" style="margin-bottom:24px">
+  <table class="table">
+    <thead>
+      <tr><th>Producto</th><th>Stock Actual</th><th>Mínimo</th><th>Unidad</th></tr>
+    </thead>
+    <tbody>
+      <% lowStockAlerts.forEach(p => { %>
+        <tr>
+          <td><a href="/inventario/producto/<%= p.id %>/lotes"><%= p.generic_name %></a></td>
+          <td><strong class="text-danger"><%= Number(p.current_stock).toFixed(2) %></strong></td>
+          <td><%= Number(p.min_stock).toFixed(2) %></td>
+          <td><%= p.consumption_unit %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>
+
+<% if (expiryAlerts.length > 0) { %>
+<div class="section-title">Alertas de Vencimiento</div>
+<div class="table-wrapper" style="margin-bottom:24px">
+  <table class="table">
+    <thead>
+      <tr><th>Producto</th><th>Lote</th><th>Vence</th><th>Restante</th><th>Unidad</th></tr>
+    </thead>
+    <tbody>
+      <% expiryAlerts.forEach(a => { %>
+        <tr>
+          <td><%= a.generic_name %></td>
+          <td><%= a.lot_number || '—' %></td>
+          <td><strong class="text-danger"><%= a.expiry_date ? new Date(a.expiry_date).toLocaleDateString('es-CO') : '—' %></strong></td>
+          <td><%= Number(a.remaining_quantity).toFixed(2) %></td>
+          <td><%= a.consumption_unit %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>
+
+<div class="section-title">Stock Actual</div>
+<div class="table-wrapper">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th>Producto</th>
+        <th>Stock Actual</th>
+        <th>Mínimo</th>
+        <th>Unidad</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (stockList.length === 0) { %>
+        <tr><td colspan="7" class="text-center">No hay productos activos.</td></tr>
+      <% } %>
+      <% stockList.forEach(p => { %>
+        <%
+          let badgeClass = 'badge-active', badgeLabel = 'OK';
+          if (p.stock_status === 'empty') { badgeClass = 'badge-danger';  badgeLabel = 'Sin stock'; }
+          else if (p.stock_status === 'low') { badgeClass = 'badge-warning'; badgeLabel = 'Bajo mínimo'; }
+        %>
+        <tr>
+          <td><code><%= p.sku %></code></td>
+          <td><%= p.generic_name %><% if (p.commercial_name) { %> <small class="text-muted">(<%= p.commercial_name %>)</small><% } %></td>
+          <td><strong><%= Number(p.current_stock).toFixed(2) %></strong></td>
+          <td><%= Number(p.min_stock).toFixed(2) %></td>
+          <td><%= p.consumption_unit %></td>
+          <td><span class="badge <%= badgeClass %>"><%= badgeLabel %></span></td>
+          <td class="actions">
+            <a href="/inventario/producto/<%= p.id %>/lotes" class="btn btn-sm">Ver lotes</a>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,159 @@
+<%
+  // Conserva los filtros actuales al cambiar solo el estado desde los contadores
+  const qs = (overrides = {}) => {
+    const base = {
+      patient_id: filters.patientId,
+      status:     filters.status,
+      from:       filters.from,
+      to:         filters.to,
+      min_age:    filters.minAgeDays,
+      method:     filters.method,
+      search:     filters.search,
+      sort:       filters.sort === 'recientes' ? '' : filters.sort
+    };
+    const merged = Object.assign({}, base, overrides);
+    const parts = Object.keys(merged)
+      .filter(k => merged[k] !== '' && merged[k] !== null && merged[k] !== undefined)
+      .map(k => k + '=' + encodeURIComponent(merged[k]));
+    return '/facturas' + (parts.length ? '?' + parts.join('&') : '');
+  };
+  const money = n => '$' + Number(n || 0).toLocaleString('es-CO');
+  // amount: qué monto mostrar bajo el conteo (total facturado o saldo por cobrar)
+  const tiles = [
+    { key: '',          label: 'Todas',      s: stats.all,       amount: 'total',   hint: 'facturado' },
+    { key: 'con_saldo', label: 'Con saldo',  s: stats.con_saldo, amount: 'balance', hint: 'por cobrar' },
+    { key: 'pendiente', label: 'Pendientes', s: stats.pendiente, amount: 'balance', hint: 'por cobrar' },
+    { key: 'parcial',   label: 'Parciales',  s: stats.parcial,   amount: 'balance', hint: 'por cobrar' },
+    { key: 'pagado',    label: 'Pagadas',    s: stats.pagado,    amount: 'total',   hint: 'cobrado' }
+  ];
+  const sum = invoices.reduce((a, inv) => {
+    a.total += Number(inv.total_amount); a.paid += Number(inv.total_paid); a.balance += Number(inv.balance);
+    return a;
+  }, { total: 0, paid: 0, balance: 0 });
+%>
+
+<div class="page-actions" style="justify-content:flex-end;gap:8px">
+  <a href="/facturas/por-cobrar" class="btn">Por Cobrar</a>
+  <a href="/facturas/nueva" class="btn btn-primary">+ Nueva Factura</a>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+  <% tiles.forEach(t => { %>
+    <a href="<%= qs({ status: t.key }) %>"
+       style="text-decoration:none;padding:8px 14px;border-radius:8px;border:1px solid <%= filters.status === t.key ? '#1a56db' : '#e2e4e0' %>;background:<%= filters.status === t.key ? '#eef3ff' : '#fff' %>;min-width:120px">
+      <span style="display:block;font-size:12px;color:#7a7d78"><%= t.label %></span>
+      <strong style="font-size:18px"><%= t.s.count %></strong>
+      <span style="display:block;font-size:11px;color:#7a7d78"><%= money(t.s[t.amount]) %> <%= t.hint %></span>
+    </a>
+  <% }) %>
+</div>
+
+<form method="GET" action="/facturas" class="filter-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:20px">
+  <div>
+    <label class="form-label">Estado</label>
+    <select name="status" class="form-control" style="width:190px">
+      <option value="">— Todos los estados —</option>
+      <option value="con_saldo" <%= filters.status === 'con_saldo' ? 'selected' : '' %>>Con saldo (pendiente + parcial)</option>
+      <option value="pendiente" <%= filters.status === 'pendiente' ? 'selected' : '' %>>Pendiente</option>
+      <option value="parcial"   <%= filters.status === 'parcial'   ? 'selected' : '' %>>Parcial</option>
+      <option value="pagado"    <%= filters.status === 'pagado'    ? 'selected' : '' %>>Pagado</option>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Paciente</label>
+    <div style="width:260px">
+      <%- include('../partials/patient-picker', { selected: selectedPatient, allowClear: true, emptyText: 'Todos' }) %>
+    </div>
+  </div>
+  <div>
+    <label class="form-label">Desde</label>
+    <input type="date" name="from" value="<%= filters.from %>" class="form-control" style="width:145px">
+  </div>
+  <div>
+    <label class="form-label">Hasta</label>
+    <input type="date" name="to" value="<%= filters.to %>" class="form-control" style="width:145px">
+  </div>
+  <div>
+    <label class="form-label">Saldo con antigüedad</label>
+    <select name="min_age" class="form-control" style="width:165px">
+      <option value="">— Cualquiera —</option>
+      <option value="15" <%= filters.minAgeDays == 15 ? 'selected' : '' %>>Más de 15 días</option>
+      <option value="30" <%= filters.minAgeDays == 30 ? 'selected' : '' %>>Más de 30 días</option>
+      <option value="60" <%= filters.minAgeDays == 60 ? 'selected' : '' %>>Más de 60 días</option>
+      <option value="90" <%= filters.minAgeDays == 90 ? 'selected' : '' %>>Más de 90 días</option>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Medio de pago</label>
+    <select name="method" class="form-control" style="width:150px">
+      <option value="">— Cualquiera —</option>
+      <option value="efectivo"      <%= filters.method === 'efectivo'      ? 'selected' : '' %>>Efectivo</option>
+      <option value="transferencia" <%= filters.method === 'transferencia' ? 'selected' : '' %>>Transferencia</option>
+      <option value="datafono"      <%= filters.method === 'datafono'      ? 'selected' : '' %>>Datáfono</option>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Buscar</label>
+    <input type="text" name="search" value="<%= filters.search %>" class="form-control" style="width:200px" placeholder="#, nombre o documento">
+  </div>
+  <div>
+    <label class="form-label">Orden</label>
+    <select name="sort" class="form-control" style="width:175px">
+      <option value="recientes" <%= filters.sort === 'recientes' ? 'selected' : '' %>>Más recientes primero</option>
+      <option value="antiguas"  <%= filters.sort === 'antiguas'  ? 'selected' : '' %>>Más antiguas primero</option>
+      <option value="saldo"     <%= filters.sort === 'saldo'     ? 'selected' : '' %>>Mayor saldo primero</option>
+    </select>
+  </div>
+  <div>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+    <a href="/facturas" class="btn" style="margin-left:6px">Limpiar</a>
+  </div>
+</form>
+
+<div style="margin-bottom:12px;color:#7a7d78;font-size:13px">
+  <strong><%= invoices.length %></strong> factura(s) encontrada(s)
+  <% if (invoices.length) { %>
+    · Total <strong><%= money(sum.total) %></strong>
+    · Pagado <strong><%= money(sum.paid) %></strong>
+    · Pendiente <strong class="<%= sum.balance > 0 ? 'text-danger' : '' %>"><%= money(sum.balance) %></strong>
+  <% } %>
+</div>
+
+<div class="table-wrapper">
+  <table class="table">
+    <thead>
+      <tr><th>#</th><th>Paciente</th><th>Fecha</th><th>Antigüedad</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Estado</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      <% if (!invoices.length) { %>
+        <tr><td colspan="9" class="text-center">No hay facturas con estos filtros.</td></tr>
+      <% } %>
+      <% invoices.forEach(inv => {
+           const pending  = Number(inv.balance);
+           const dias     = Number(inv.days_old);
+           const atrasada = pending > 0 && dias >= 30;
+      %>
+        <tr>
+          <td>#<%= inv.id %></td>
+          <td><%= inv.patient_name %><br><small class="text-muted"><%= inv.document_type %> <%= inv.document_number %></small></td>
+          <td><%= new Date(inv.created_at).toLocaleDateString('es-CO') %></td>
+          <td>
+            <% if (atrasada) { %>
+              <span class="badge badge-warning" title="Con saldo pendiente hace <%= dias %> días"><%= dias %> días</span>
+            <% } else { %>
+              <%= dias %> <%= dias === 1 ? 'día' : 'días' %>
+            <% } %>
+          </td>
+          <td><%= money(inv.total_amount) %></td>
+          <td><%= money(inv.total_paid) %></td>
+          <td class="<%= pending > 0 ? 'text-danger' : '' %>"><%= money(pending) %></td>
+          <td><span class="badge invoice-status-<%= inv.status %>"><%= inv.status %></span></td>
+          <td class="actions">
+            <a href="/facturas/<%= inv.id %>" class="btn btn-sm">Ver</a>
+            <a href="/facturas/<%= inv.id %>/imprimir" class="btn btn-sm" target="_blank">Recibo</a>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

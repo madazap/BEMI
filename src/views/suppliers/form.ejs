@@ -1,0 +1,32 @@
+<form action="/proveedores/<%= supplier ? supplier.id : '' %>" method="POST" class="form-card" novalidate>
+  <div class="form-group">
+    <label for="name">Nombre *</label>
+    <input type="text" id="name" name="name" required
+           value="<%= supplier ? supplier.name : '' %>" placeholder="Ej: Laboratorios ABC">
+  </div>
+
+  <div class="form-group">
+    <label for="contact_name">Nombre de contacto</label>
+    <input type="text" id="contact_name" name="contact_name"
+           value="<%= supplier ? (supplier.contact_name || '') : '' %>" placeholder="Ej: Juan Pérez">
+  </div>
+
+  <div class="form-group">
+    <label for="phone">Teléfono</label>
+    <input type="text" id="phone" name="phone"
+           value="<%= supplier ? (supplier.phone || '') : '' %>" placeholder="Ej: 601 234 5678">
+  </div>
+
+  <div class="form-group">
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email"
+           value="<%= supplier ? (supplier.email || '') : '' %>" placeholder="contacto@proveedor.com">
+  </div>
+
+  <div class="form-actions">
+    <a href="/proveedores" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary">
+      <%= supplier ? 'Guardar cambios' : 'Crear proveedor' %>
+    </button>
+  </div>
+</form>

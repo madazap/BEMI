@@ -1,0 +1,203 @@
+<div class="info-box" style="margin-bottom:20px">
+  <% if (sessionData.is_control) { %><strong>Control</strong><% } else { %>Sesión <strong>#<%= sessionData.session_number %></strong><% } %> — <strong><%= sessionData.treatment_name %></strong> — Paciente: <strong><%= sessionData.patient_name %></strong>
+</div>
+
+<form action="/sesiones/<%= sessionData.id %>/realizar" method="POST" class="form-card form-wide" novalidate>
+  <div class="form-row">
+    <div class="form-group">
+      <label for="performed_date">Fecha y Hora de Realización *</label>
+      <input type="datetime-local" id="performed_date" name="performed_date" required value="<%= now %>">
+    </div>
+    <div class="form-group">
+      <label for="professional_hours">Horas Profesional</label>
+      <input type="number" id="professional_hours" name="professional_hours"
+             min="0" step="0.25" placeholder="Ej: 1.5">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="notes">Notas</label>
+    <textarea id="notes" name="notes" rows="3" placeholder="Observaciones de la sesión..."></textarea>
+  </div>
+
+  <div class="form-section">
+    <div class="section-header" style="margin-bottom:6px">
+      <h4>Insumos del tratamiento</h4>
+    </div>
+    <p class="text-muted" style="margin-bottom:10px">
+      Consumo estándar configurado para <strong><%= sessionData.treatment_name %></strong>. Ajusta la cantidad si en esta sesión se usó otra, o quítalo si no se usó.
+      Los lotes se descuentan automáticamente empezando por el que vence primero.
+    </p>
+    <div class="table-wrapper">
+      <table class="table">
+        <thead><tr><th>Producto</th><th>Disponible</th><th>Cantidad</th><th></th></tr></thead>
+        <tbody id="standardRows"></tbody>
+        <tbody id="standardEmpty">
+          <tr><td colspan="4" class="text-muted" style="text-align:center;padding:14px">
+            <%= sessionData.is_control ? 'La sesión de control no consume insumos estándar. Si se usó algo, agrégalo como producto adicional.' : 'Este tratamiento no tiene insumos configurados (Tratamientos → Insumos).' %>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="section-header" style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+      <h4>Productos adicionales</h4>
+      <button type="button" class="btn btn-sm btn-primary" id="btnAddExtra">+ Producto adicional</button>
+    </div>
+    <p class="text-muted" style="margin-bottom:10px">Insumos consumidos por razones ajenas al tratamiento. Quedan registrados como <em>adicionales</em>.</p>
+    <div class="table-wrapper">
+      <table class="table">
+        <thead><tr><th>Producto</th><th>Disponible</th><th>Cantidad</th><th></th></tr></thead>
+        <tbody id="extraRows"></tbody>
+        <tbody id="extraEmpty">
+          <tr><td colspan="4" class="text-muted" style="text-align:center;padding:14px">Sin productos adicionales.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <a href="/planes/<%= sessionData.patient_treatment_id %>" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary">Registrar Sesión</button>
+  </div>
+</form>
+
+<dialog class="modal" id="productModal">
+  <div class="modal-header">
+    <h4>Agregar producto adicional</h4>
+    <button type="button" class="modal-close" id="productModalClose" aria-label="Cerrar">✕</button>
+  </div>
+  <input type="search" id="productSearch" placeholder="Buscar por nombre, nombre comercial o SKU…" autocomplete="off">
+  <div class="modal-results" id="productResults"></div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary btn-sm" id="productModalDone">Listo</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  const standard = <%- JSON.stringify(standard.map(s => ({ product_id: s.product_id, name: s.generic_name, extra: s.commercial_name, unit: s.consumption_unit, stock: Number(s.current_stock) || 0, quantity: Number(s.quantity) || 0 }))) %>;
+  const products = <%- JSON.stringify(products.map(p => ({ product_id: p.id, sku: p.sku, name: p.generic_name, extra: p.commercial_name, unit: p.consumption_unit, stock: Number(p.current_stock) || 0 }))) %>;
+
+  const esc  = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const fmt  = n => (+Number(n).toFixed(4)).toLocaleString('es-CO');
+
+  const stdBody   = document.getElementById('standardRows');
+  const extraBody = document.getElementById('extraRows');
+
+  function addRow(tbody, p, isExtra) {
+    const tr = document.createElement('tr');
+    tr.className = 'consume-row';
+    tr.dataset.productId = p.product_id;
+    tr.dataset.stock = p.stock;
+    tr.innerHTML = `
+      <td>
+        <input type="hidden" name="product_id" value="${esc(p.product_id)}">
+        <input type="hidden" name="is_extra"   value="${isExtra ? 1 : 0}">
+        ${esc(p.name)}${p.extra && p.extra !== p.name ? `<br><small class="text-muted">${esc(p.extra)}</small>` : ''}
+      </td>
+      <td>${fmt(p.stock)} ${esc(p.unit)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" name="quantity" value="${esc(p.quantity ?? 1)}" min="0" step="0.0001" style="width:100px" class="qty-input">
+          <span class="text-muted">${esc(p.unit)}</span>
+        </div>
+        <small class="stock-warn" hidden></small>
+      </td>
+      <td><button type="button" class="btn btn-sm btn-danger btn-remove">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+    refresh();
+    return tr;
+  }
+
+  // Advierte si lo pedido supera el stock (sumando estándar + adicional del mismo producto)
+  function refresh() {
+    const totals = {};
+    document.querySelectorAll('tr.consume-row').forEach(tr => {
+      const q = parseFloat(tr.querySelector('.qty-input').value) || 0;
+      totals[tr.dataset.productId] = (totals[tr.dataset.productId] || 0) + q;
+    });
+    document.querySelectorAll('tr.consume-row').forEach(tr => {
+      const warn  = tr.querySelector('.stock-warn');
+      const stock = Number(tr.dataset.stock);
+      const total = totals[tr.dataset.productId];
+      const short = total - stock;
+      warn.hidden = !(short > 0.00005);
+      if (!warn.hidden) warn.textContent = `Stock insuficiente: faltan ${fmt(short)}. Se registrará igual, con advertencia.`;
+    });
+    document.getElementById('standardEmpty').hidden = stdBody.children.length > 0;
+    document.getElementById('extraEmpty').hidden    = extraBody.children.length > 0;
+  }
+
+  [stdBody, extraBody].forEach(tb => {
+    tb.addEventListener('input', refresh);
+    tb.addEventListener('click', e => {
+      if (e.target.classList.contains('btn-remove')) { e.target.closest('tr').remove(); refresh(); }
+    });
+  });
+
+  standard.forEach(p => addRow(stdBody, p, false));
+  refresh();
+
+  // ── Modal de productos adicionales ────────────────────────
+  const modal   = document.getElementById('productModal');
+  const search  = document.getElementById('productSearch');
+  const results = document.getElementById('productResults');
+  let visible = [];
+
+  document.getElementById('btnAddExtra').addEventListener('click', () => {
+    modal.showModal();
+    search.select();
+    search.focus();
+    render();
+  });
+  document.getElementById('productModalClose').addEventListener('click', () => modal.close());
+  document.getElementById('productModalDone').addEventListener('click', () => modal.close());
+  modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });
+  search.addEventListener('input', render);
+  search.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (visible.length === 1) results.querySelector('tr.modal-row').click();
+    }
+  });
+
+  function render() {
+    const terms = norm(search.value).split(/\s+/).filter(Boolean);
+    visible = products.filter(p => terms.every(t => norm(`${p.name} ${p.extra || ''} ${p.sku || ''}`).includes(t)));
+    if (!visible.length) { results.innerHTML = '<p class="text-muted modal-hint">Sin resultados.</p>'; return; }
+    results.innerHTML = `
+      <table class="table">
+        <thead><tr><th>Producto</th><th>SKU</th><th style="text-align:right">Disponible</th><th></th></tr></thead>
+        <tbody>${visible.map((p, i) => `
+          <tr class="modal-row" data-i="${i}">
+            <td>${esc(p.name)}${p.extra && p.extra !== p.name ? `<br><small class="text-muted">${esc(p.extra)}</small>` : ''}</td>
+            <td>${esc(p.sku)}</td>
+            <td style="text-align:right">${fmt(p.stock)} ${esc(p.unit)}</td>
+            <td style="text-align:right"><span class="btn btn-sm">+ Agregar</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  results.addEventListener('click', e => {
+    const row = e.target.closest('tr.modal-row');
+    if (!row) return;
+    const p = visible[row.dataset.i];
+    const existing = extraBody.querySelector(`tr[data-product-id="${p.product_id}"]`);
+    if (existing) {
+      const q = existing.querySelector('.qty-input');
+      q.value = (parseFloat(q.value) || 0) + 1;
+      refresh();
+    } else {
+      addRow(extraBody, { ...p, quantity: 1 }, true);
+    }
+    row.classList.add('just-added');
+    setTimeout(() => row.classList.remove('just-added'), 600);
+  });
+})();
+</script>

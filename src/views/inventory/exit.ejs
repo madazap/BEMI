@@ -1,0 +1,91 @@
+<form action="/inventario/salidas" method="POST" class="form-card form-wide" novalidate>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="product_id">Producto *</label>
+      <select id="product_id" name="product_id" required>
+        <option value="">— Seleccionar —</option>
+        <% products.forEach(p => { %>
+          <option value="<%= p.id %>"><%= p.generic_name %> (<%= p.sku %>)</option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="stock_entry_id">Lote *</label>
+      <select id="stock_entry_id" name="stock_entry_id" required disabled>
+        <option value="">— Seleccionar producto primero —</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="quantity">Cantidad * <span id="lbl-unit" class="unit-label"></span></label>
+      <input type="number" id="quantity" name="quantity" required min="0.0001" step="0.0001">
+    </div>
+    <div class="form-group">
+      <label for="reason">Razón *</label>
+      <select id="reason" name="reason" required>
+        <option value="">— Seleccionar —</option>
+        <option value="vencimiento">Vencimiento</option>
+        <option value="ajuste">Ajuste de inventario</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group" style="max-width:240px">
+    <label for="exit_date">Fecha *</label>
+    <input type="date" id="exit_date" name="exit_date" required
+           value="<%= new Date().toISOString().split('T')[0] %>">
+  </div>
+
+  <div class="form-actions">
+    <a href="/inventario" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary">Registrar Salida</button>
+  </div>
+</form>
+
+<script>
+(function () {
+  const productSel = document.getElementById('product_id');
+  const lotSel     = document.getElementById('stock_entry_id');
+  const lblUnit    = document.getElementById('lbl-unit');
+
+  productSel.addEventListener('change', async function () {
+    const id = this.value;
+    lotSel.innerHTML = '<option value="">— Cargando... —</option>';
+    lotSel.disabled = true;
+    lblUnit.textContent = '';
+
+    if (!id) { lotSel.innerHTML = '<option value="">— Seleccionar producto primero —</option>'; return; }
+
+    try {
+      const [productRes, lotsRes] = await Promise.all([
+        fetch(`/api/productos/${id}`),
+        fetch(`/api/productos/${id}/lotes`)
+      ]);
+      const product = await productRes.json();
+      const lots    = await lotsRes.json();
+
+      lblUnit.textContent = product.consumption_unit ? `(${product.consumption_unit})` : '';
+      lotSel.innerHTML = '<option value="">— Seleccionar lote —</option>';
+
+      if (lots.length === 0) {
+        lotSel.innerHTML = '<option value="">Sin lotes con stock disponible</option>';
+      } else {
+        lots.forEach(l => {
+          const exp = l.expiry_date ? ` — vence ${new Date(l.expiry_date).toLocaleDateString('es-CO')}` : '';
+          const opt = document.createElement('option');
+          opt.value = l.id;
+          opt.textContent = `Lote: ${l.lot_number || 'S/N'}${exp} — Restante: ${Number(l.remaining_quantity).toFixed(2)}`;
+          lotSel.appendChild(opt);
+        });
+        lotSel.disabled = false;
+      }
+    } catch (e) {
+      console.error(e);
+      lotSel.innerHTML = '<option value="">Error al cargar lotes</option>';
+    }
+  });
+})();
+</script>

@@ -1,0 +1,143 @@
+<%
+  // Conserva los filtros actuales al cambiar solo el estado desde los contadores
+  const qs = (overrides = {}) => {
+    const base = {
+      patient_id: filters.patientId,
+      status:     filters.status,
+      from:       filters.from,
+      to:         filters.to,
+      min_age:    filters.minAgeDays,
+      search:     filters.search,
+      sort:       filters.sort === 'antiguas' ? 'antiguas' : ''
+    };
+    const merged = Object.assign({}, base, overrides);
+    const parts = Object.keys(merged)
+      .filter(k => merged[k] !== '' && merged[k] !== null && merged[k] !== undefined)
+      .map(k => k + '=' + encodeURIComponent(merged[k]));
+    return '/cotizaciones' + (parts.length ? '?' + parts.join('&') : '');
+  };
+  const tiles = [
+    { key: '',             label: 'Todas',        count: stats.total },
+    { key: 'sin_aprobar',  label: 'Sin aprobar',  count: stats.sin_aprobar },
+    { key: 'no_aceptadas', label: 'No aceptadas', count: stats.no_aceptadas },
+    { key: 'borrador',     label: 'Borrador',     count: stats.borrador },
+    { key: 'enviada',      label: 'Enviadas',     count: stats.enviada },
+    { key: 'rechazada',    label: 'Rechazadas',   count: stats.rechazada },
+    { key: 'aprobada',     label: 'Aprobadas',    count: stats.aprobada },
+    { key: 'facturada',    label: 'Facturadas',   count: stats.facturada }
+  ];
+%>
+
+<div class="page-actions" style="justify-content:flex-end">
+  <% if (session.roles.includes('admin')) { %>
+    <a href="/cotizaciones/nueva" class="btn btn-primary">+ Nueva Cotización</a>
+  <% } %>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+  <% tiles.forEach(t => { %>
+    <a href="<%= qs({ status: t.key }) %>"
+       style="text-decoration:none;padding:8px 14px;border-radius:8px;border:1px solid <%= filters.status === t.key ? '#1a56db' : '#e2e4e0' %>;background:<%= filters.status === t.key ? '#eef3ff' : '#fff' %>;min-width:92px">
+      <span style="display:block;font-size:12px;color:#7a7d78"><%= t.label %></span>
+      <strong style="font-size:18px"><%= t.count %></strong>
+    </a>
+  <% }) %>
+</div>
+
+<form method="GET" action="/cotizaciones" class="filter-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:20px">
+  <div>
+    <label class="form-label">Estado</label>
+    <select name="status" class="form-control" style="width:215px">
+      <option value="">— Todos los estados —</option>
+      <option value="sin_aprobar"  <%= filters.status === 'sin_aprobar'  ? 'selected' : '' %>>Sin aprobar (borrador + enviada)</option>
+      <option value="no_aceptadas" <%= filters.status === 'no_aceptadas' ? 'selected' : '' %>>No aceptadas (+ rechazadas)</option>
+      <option value="borrador"     <%= filters.status === 'borrador'     ? 'selected' : '' %>>Borrador</option>
+      <option value="enviada"      <%= filters.status === 'enviada'      ? 'selected' : '' %>>Enviada</option>
+      <option value="rechazada"    <%= filters.status === 'rechazada'    ? 'selected' : '' %>>Rechazada</option>
+      <option value="aprobada"     <%= filters.status === 'aprobada'     ? 'selected' : '' %>>Aprobada</option>
+      <option value="facturada"    <%= filters.status === 'facturada'    ? 'selected' : '' %>>Facturada</option>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Paciente</label>
+    <div style="width:260px">
+      <%- include('../partials/patient-picker', { selected: selectedPatient, allowClear: true, emptyText: 'Todos' }) %>
+    </div>
+  </div>
+  <div>
+    <label class="form-label">Desde</label>
+    <input type="date" name="from" value="<%= filters.from %>" class="form-control" style="width:145px">
+  </div>
+  <div>
+    <label class="form-label">Hasta</label>
+    <input type="date" name="to" value="<%= filters.to %>" class="form-control" style="width:145px">
+  </div>
+  <div>
+    <label class="form-label">Antigüedad</label>
+    <select name="min_age" class="form-control" style="width:175px">
+      <option value="">— Cualquiera —</option>
+      <option value="7"  <%= filters.minAgeDays == 7  ? 'selected' : '' %>>Más de 7 días</option>
+      <option value="15" <%= filters.minAgeDays == 15 ? 'selected' : '' %>>Más de 15 días</option>
+      <option value="30" <%= filters.minAgeDays == 30 ? 'selected' : '' %>>Más de 30 días</option>
+      <option value="60" <%= filters.minAgeDays == 60 ? 'selected' : '' %>>Más de 60 días</option>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Buscar</label>
+    <input type="text" name="search" value="<%= filters.search %>" class="form-control" style="width:200px" placeholder="# o nombre del paciente">
+  </div>
+  <div>
+    <label class="form-label">Orden</label>
+    <select name="sort" class="form-control" style="width:175px">
+      <option value="recientes" <%= filters.sort !== 'antiguas' ? 'selected' : '' %>>Más recientes primero</option>
+      <option value="antiguas"  <%= filters.sort === 'antiguas' ? 'selected' : '' %>>Más antiguas primero</option>
+    </select>
+  </div>
+  <div>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+    <a href="/cotizaciones" class="btn" style="margin-left:6px">Limpiar</a>
+  </div>
+</form>
+
+<div style="margin-bottom:12px;color:#7a7d78;font-size:13px">
+  <strong><%= quotations.length %></strong> cotización(es) encontrada(s)
+</div>
+
+<div class="table-wrapper">
+  <table class="table">
+    <thead>
+      <tr><th>#</th><th>Paciente</th><th>Fecha</th><th>Antigüedad</th><th>Ítems</th><th>Total</th><th>Estado</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      <% if (!quotations.length) { %>
+        <tr><td colspan="8" class="text-center">No hay cotizaciones con estos filtros.</td></tr>
+      <% } %>
+      <% quotations.forEach(q => { %>
+        <%
+          const pendiente = q.status === 'borrador' || q.status === 'enviada';
+          const dias      = Number(q.days_old);
+          const atrasada  = pendiente && dias >= 15;
+        %>
+        <tr>
+          <td>#<%= q.id %></td>
+          <td><%= q.patient_name %></td>
+          <td><%= new Date(q.created_at).toLocaleDateString('es-CO') %></td>
+          <td>
+            <% if (atrasada) { %>
+              <span class="badge badge-warning" title="Pendiente de respuesta hace <%= dias %> días"><%= dias %> días</span>
+            <% } else { %>
+              <%= dias %> <%= dias === 1 ? 'día' : 'días' %>
+            <% } %>
+          </td>
+          <td><%= q.item_count %></td>
+          <td>$<%= Number(q.total).toLocaleString('es-CO') %></td>
+          <td><span class="badge quote-status-<%= q.status %>"><%= q.status %></span></td>
+          <td class="actions">
+            <a href="/cotizaciones/<%= q.id %>" class="btn btn-sm">Ver</a>
+            <a href="/cotizaciones/<%= q.id %>/imprimir" class="btn btn-sm" target="_blank">Imprimir</a>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

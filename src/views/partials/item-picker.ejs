@@ -1,0 +1,109 @@
+<%
+  // Modal de búsqueda de tratamientos y magistrales.
+  // Parámetros: treatments, magistrals (listas activas).
+  // Uso desde la página: window.openItemPicker(item => { ... })
+  //   item = { kind: 'sesion'|'magistral', id, name, extra, type, sessions, price }
+%>
+<dialog class="modal" id="itemModal">
+  <div class="modal-header">
+    <h4>Agregar ítems</h4>
+    <button type="button" class="modal-close" id="itemModalClose" aria-label="Cerrar">✕</button>
+  </div>
+  <input type="search" id="itemSearch" placeholder="Buscar tratamiento o magistral por nombre…" autocomplete="off">
+  <div class="chip-group" id="itemFilters">
+    <button type="button" class="chip active" data-filter="">Todos</button>
+    <% Object.entries(TREATMENT_TYPES).forEach(([val, lbl]) => { %>
+      <button type="button" class="chip" data-filter="<%= val %>"><%= lbl %></button>
+    <% }) %>
+    <button type="button" class="chip" data-filter="magistral">Magistrales</button>
+  </div>
+  <div class="modal-results" id="itemResults"></div>
+  <div class="modal-footer" style="justify-content:space-between;align-items:center">
+    <span class="text-muted" id="itemAddedCount"></span>
+    <button type="button" class="btn btn-primary btn-sm" id="itemModalDone">Listo</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  const TYPE_LABEL = { ...<%- JSON.stringify(TREATMENT_TYPES) %>, magistral: 'Magistral' };
+  const catalog = [
+    ...<%- JSON.stringify(treatments.map(t => ({ kind: 'sesion', id: t.id, name: t.name, type: t.type, sessions: t.total_sessions, price: Number(t.sale_price) || 0 }))) %>,
+    ...<%- JSON.stringify(magistrals.map(m => ({ kind: 'magistral', id: m.id, name: m.generic_name, extra: m.commercial_name, type: 'magistral', price: Number(m.sale_price) || 0 }))) %>
+  ];
+
+  const esc   = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const money = n => '$' + Number(n || 0).toLocaleString('es-CO');
+  const norm  = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+  const modal   = document.getElementById('itemModal');
+  const search  = document.getElementById('itemSearch');
+  const results = document.getElementById('itemResults');
+  const counter = document.getElementById('itemAddedCount');
+  let filter = '', added = 0, visible = [], onPick = null;
+
+  window.openItemPicker = function (callback) {
+    onPick = callback;
+    added = 0;
+    counter.textContent = '';
+    modal.showModal();
+    search.select();
+    search.focus();
+    render();
+  };
+
+  document.getElementById('itemModalClose').addEventListener('click', () => modal.close());
+  document.getElementById('itemModalDone').addEventListener('click', () => modal.close());
+  modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });
+
+  document.getElementById('itemFilters').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    filter = chip.dataset.filter;
+    document.querySelectorAll('#itemFilters .chip').forEach(c => c.classList.toggle('active', c === chip));
+    render();
+  });
+  search.addEventListener('input', render);
+  search.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (visible.length === 1) results.querySelector('tr.modal-row').click();
+    }
+  });
+
+  function render() {
+    const terms = norm(search.value).split(/\s+/).filter(Boolean);
+    visible = catalog.filter(c =>
+      (!filter || c.type === filter) &&
+      terms.every(t => norm(c.name + ' ' + (c.extra || '')).includes(t))
+    );
+    if (!visible.length) {
+      results.innerHTML = '<p class="text-muted modal-hint">Sin resultados.</p>';
+      return;
+    }
+    results.innerHTML = `
+      <table class="table">
+        <thead><tr><th>Nombre</th><th>Tipo</th><th>Sesiones</th><th style="text-align:right">Precio</th><th></th></tr></thead>
+        <tbody>${visible.map((c, i) => `
+          <tr class="modal-row" data-i="${i}">
+            <td>${esc(c.name)}${c.extra && c.extra !== c.name ? `<br><small class="text-muted">${esc(c.extra)}</small>` : ''}</td>
+            <td><span class="badge badge-type">${TYPE_LABEL[c.type] || esc(c.type)}</span></td>
+            <td>${c.sessions ?? '—'}</td>
+            <td style="text-align:right">${money(c.price)}</td>
+            <td style="text-align:right"><span class="btn btn-sm">+ Agregar</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  results.addEventListener('click', e => {
+    const row = e.target.closest('tr.modal-row');
+    if (!row || !onPick) return;
+    onPick(visible[row.dataset.i]);
+    added++;
+    counter.textContent = `${added} agregado${added === 1 ? '' : 's'}`;
+    row.classList.add('just-added');
+    setTimeout(() => row.classList.remove('just-added'), 600);
+  });
+})();
+</script>

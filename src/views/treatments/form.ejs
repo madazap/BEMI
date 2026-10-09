@@ -1,0 +1,75 @@
+<form action="/tratamientos/<%= treatment ? treatment.id : '' %>" method="POST" class="form-card form-wide" novalidate>
+  <div class="form-row">
+    <div class="form-group">
+      <label for="name">Nombre *</label>
+      <input type="text" id="name" name="name" required
+             value="<%= treatment ? treatment.name : '' %>" placeholder="Ej: Mesoterapia Capilar">
+    </div>
+    <div class="form-group">
+      <label for="type">Tipo *</label>
+      <select id="type" name="type" required>
+        <option value="">— Seleccionar —</option>
+        <% Object.entries(TREATMENT_TYPES).forEach(([val, lbl]) => { %>
+          <option value="<%= val %>" <%= treatment && treatment.type === val ? 'selected' : '' %>><%= lbl %></option>
+        <% }) %>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="description">Descripción</label>
+    <textarea id="description" name="description" rows="3" placeholder="Descripción del tratamiento..."><%= treatment ? (treatment.description || '') : '' %></textarea>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="total_sessions">Número de Sesiones *</label>
+      <input type="number" id="total_sessions" name="total_sessions" required
+             min="1" value="<%= treatment ? treatment.total_sessions : 1 %>">
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:normal">
+        <input type="checkbox" name="requires_control" value="1" <%= treatment && treatment.requires_control ? 'checked' : '' %>>
+        Requiere sesión de control al final
+      </label>
+      <small class="text-muted">Se añade una sesión "Control" (sin cobro) a los planes que se creen desde ahora.</small>
+    </div>
+    <div class="form-group">
+      <label for="sale_price">Precio de Venta *</label>
+      <input type="number" id="sale_price" name="sale_price" required
+             min="0" step="0.01" value="<%= treatment ? treatment.sale_price : '' %>" placeholder="0.00">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="execution_cost">Costo de Ejecución *</label>
+      <input type="number" id="execution_cost" name="execution_cost" required
+             min="0" step="0.01" value="<%= treatment ? treatment.execution_cost : '' %>" placeholder="0.00">
+    </div>
+    <div class="form-group">
+      <label>Margen (calculado)</label>
+      <input type="text" id="margin_display" readonly class="input-readonly" placeholder="0.00">
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <a href="/tratamientos" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary">
+      <%= treatment ? 'Guardar cambios' : 'Crear Tratamiento' %>
+    </button>
+  </div>
+</form>
+
+<script>
+(function () {
+  const sale    = document.getElementById('sale_price');
+  const cost    = document.getElementById('execution_cost');
+  const display = document.getElementById('margin_display');
+  function update() {
+    const m = (parseFloat(sale.value) || 0) - (parseFloat(cost.value) || 0);
+    display.value = '$' + m.toLocaleString('es-CO', { minimumFractionDigits: 2 });
+  }
+  sale.addEventListener('input', update);
+  cost.addEventListener('input', update);
+  update();
+})();
+</script>

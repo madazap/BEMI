@@ -1,0 +1,45 @@
+<div class="page-actions">
+  <a href="/proveedores/nuevo" class="btn btn-primary">+ Nuevo Proveedor</a>
+</div>
+
+<div class="table-wrapper">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Contacto</th>
+        <th>Teléfono</th>
+        <th>Email</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (suppliers.length === 0) { %>
+        <tr><td colspan="6" class="text-center">No hay proveedores registrados.</td></tr>
+      <% } %>
+      <% suppliers.forEach(s => { %>
+        <tr class="<%= s.is_active ? '' : 'row-inactive' %>">
+          <td><strong><%= s.name %></strong></td>
+          <td><%= s.contact_name || '—' %></td>
+          <td><%= s.phone || '—' %></td>
+          <td><%= s.email || '—' %></td>
+          <td>
+            <span class="badge <%= s.is_active ? 'badge-active' : 'badge-inactive' %>">
+              <%= s.is_active ? 'Activo' : 'Inactivo' %>
+            </span>
+          </td>
+          <td class="actions">
+            <a href="/proveedores/<%= s.id %>/editar" class="btn btn-sm">Editar</a>
+            <form action="/proveedores/<%= s.id %>/toggle-activo" method="POST" style="display:inline">
+              <button type="submit" class="btn btn-sm <%= s.is_active ? 'btn-danger' : 'btn-success' %>"
+                      onclick="return confirm('<%= s.is_active ? 'Desactivar' : 'Activar' %> este proveedor?')">
+                <%= s.is_active ? 'Desactivar' : 'Activar' %>
+              </button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

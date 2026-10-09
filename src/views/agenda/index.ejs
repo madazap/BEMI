@@ -1,0 +1,110 @@
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+
+<% if (upcoming.length > 0) { %>
+<div class="section-block" style="margin-bottom:24px">
+  <h3 style="margin-bottom:12px">Próximas citas</h3>
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr><th>Paciente</th><th>Fecha</th><th>Duración</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% upcoming.forEach(a => { %>
+          <tr>
+            <td><%= a.patient_name %></td>
+            <td><%= new Date(a.scheduled_at).toLocaleString('es-CO', { dateStyle:'short', timeStyle:'short' }) %></td>
+            <td><%= a.duration_minutes %> min</td>
+            <td><span class="badge appt-status-<%= a.status %>"><%= a.status %></span></td>
+            <td><a href="/agenda/<%= a.id %>" class="btn btn-sm">Ver</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<div class="fc-wrapper">
+  <div id="calendar"></div>
+</div>
+
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+<script>
+(function () {
+  const STATUS_CONFIG = {
+    agendada:   { bg: '#dbeafe', border: '#93c5fd', text: '#1e40af' },
+    confirmada: { bg: '#d1fae5', border: '#6ee7b7', text: '#065f46' },
+    realizada:  { bg: '#f1f5f9', border: '#cbd5e1', text: '#475569' },
+    cancelada:  { bg: '#fee2e2', border: '#fca5a5', text: '#b91c1c' }
+  };
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function fmtTime(dateStr) {
+    const d = new Date(dateStr);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+    initialView:       'timeGridWeek',
+    locale:            'es',
+    slotMinTime:       '06:00:00',
+    slotMaxTime:       '21:00:00',
+    slotDuration:      '00:30:00',
+    slotLabelInterval: '01:00',
+    allDaySlot:        false,
+    nowIndicator:      true,
+    expandRows:        true,
+    height:            680,
+    businessHours: {
+      daysOfWeek:  [1, 2, 3, 4, 5, 6],
+      startTime:   '06:00',
+      endTime:     '21:00'
+    },
+    headerToolbar: {
+      left:   'prev,next today',
+      center: 'title',
+      right:  'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    buttonText: {
+      today:        'Hoy',
+      month:        'Mes',
+      week:         'Semana',
+      day:          'Día'
+    },
+    events: '/api/agenda/eventos',
+
+    eventContent(info) {
+      const p   = info.event.extendedProps;
+      const cfg = STATUS_CONFIG[p.status] || STATUS_CONFIG.agendada;
+      const end = info.event.end ? fmtTime(info.event.end) : '';
+      const timeLabel = fmtTime(info.event.start) + (end ? '–' + end : '');
+      return {
+        html: `
+          <div class="fc-event-inner" style="border-left:3px solid ${cfg.border}">
+            <span class="fc-ev-name">${p.patient_name}</span>
+            ${p.treatment_name ? `<span class="fc-ev-treat">${p.treatment_name}</span>` : ''}
+            <span class="fc-ev-time">${timeLabel}</span>
+          </div>`
+      };
+    },
+
+    eventDidMount(info) {
+      const cfg = STATUS_CONFIG[info.event.extendedProps.status] || STATUS_CONFIG.agendada;
+      Object.assign(info.el.style, {
+        backgroundColor: cfg.bg,
+        borderColor:     'transparent',
+        borderRadius:    '6px',
+        boxShadow:       'none',
+        padding:         '0'
+      });
+    },
+
+    eventClick(info) {
+      window.location.href = `/agenda/${info.event.id}`;
+    }
+  });
+
+  calendar.render();
+})();
+</script>

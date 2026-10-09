@@ -1,0 +1,78 @@
+<div class="period-selector">
+  <form method="GET" action="/gastos/informe" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <label for="from">Desde:</label>
+    <input type="date" id="from" name="from" value="<%= from %>">
+    <label for="to">Hasta:</label>
+    <input type="date" id="to" name="to" value="<%= to %>">
+    <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+    <a href="/gastos" class="btn btn-sm">Volver a Gastos</a>
+  </form>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:20px">
+  <div class="form-card" style="max-width:none">
+    <p style="margin:0;color:var(--muted)">Ingresos</p>
+    <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:var(--success, #1a7f37)">$<%= totalIncome.toLocaleString('es-CO') %></p>
+  </div>
+  <div class="form-card" style="max-width:none">
+    <p style="margin:0;color:var(--muted)">Egresos</p>
+    <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:var(--danger, #c0392b)">$<%= totalExpenses.toLocaleString('es-CO') %></p>
+  </div>
+  <div class="form-card" style="max-width:none">
+    <p style="margin:0;color:var(--muted)">Neto</p>
+    <p style="margin:6px 0 0;font-size:20px;font-weight:700">$<%= net.toLocaleString('es-CO') %></p>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px">
+
+  <div class="form-card" style="max-width:none">
+    <h3 style="margin-bottom:16px">Ingresos (tratamientos facturados)</h3>
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr><th>Fecha</th><th>Concepto</th><th>Detalle</th><th>Monto</th></tr>
+        </thead>
+        <tbody>
+          <% if (income.length === 0) { %>
+            <tr><td colspan="4" class="text-center">Sin ingresos en el período.</td></tr>
+          <% } %>
+          <% income.forEach(r => { %>
+            <tr>
+              <td><%= new Date(r.date).toLocaleDateString('es-CO') %></td>
+              <td><%= r.concept %></td>
+              <td><%= r.detail %></td>
+              <td>$<%= r.amount.toLocaleString('es-CO') %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="form-card" style="max-width:none">
+    <h3 style="margin-bottom:16px">Egresos (gastos fijos y ocasionales)</h3>
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Detalle</th><th>Monto</th></tr>
+        </thead>
+        <tbody>
+          <% if (expenses.length === 0) { %>
+            <tr><td colspan="5" class="text-center">Sin egresos en el período.</td></tr>
+          <% } %>
+          <% expenses.forEach(r => { %>
+            <tr>
+              <td><%= new Date(r.date).toLocaleDateString('es-CO') %></td>
+              <td><span class="badge"><%= r.type %></span></td>
+              <td><%= r.concept %></td>
+              <td><%= r.detail || '—' %></td>
+              <td>$<%= r.amount.toLocaleString('es-CO') %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

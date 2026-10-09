@@ -1,0 +1,45 @@
+<div class="plan-header">
+  <div>
+    <p class="text-muted">Paciente: <a href="/pacientes/<%= pt.patient_id %>"><%= pt.patient_name %></a></p>
+    <p>Tipo: <strong><%= TREATMENT_TYPES[pt.type] || pt.type %></strong> &nbsp;|&nbsp; Plan de pago: <strong><%= pt.payment_plan === 'paquete' ? 'Paquete' : 'Por sesión' %></strong></p>
+    <p>Inicio: <strong><%= new Date(pt.start_date).toLocaleDateString('es-CO') %></strong></p>
+  </div>
+  <span class="badge <%= pt.status === 'activo' ? 'badge-active' : 'badge-inactive' %>" style="font-size:13px"><%= pt.status %></span>
+</div>
+
+<div class="table-wrapper" style="margin-top:20px">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Fecha Agendada</th>
+        <th>Fecha Realizada</th>
+        <th>Horas Prof.</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% sessions.forEach(s => { %>
+        <tr>
+          <td><% if (s.is_control) { %><span class="badge badge-type">Control</span><% } else { %><%= s.session_number %><% } %></td>
+          <td><%= s.scheduled_date ? new Date(s.scheduled_date).toLocaleString('es-CO') : '—' %></td>
+          <td><%= s.performed_date ? new Date(s.performed_date).toLocaleString('es-CO') : '—' %></td>
+          <td><%= s.professional_hours ? s.professional_hours + ' h' : '—' %></td>
+          <td><span class="badge session-status-<%= s.status %>"><%= s.status %></span></td>
+          <td class="actions">
+            <a href="/sesiones/<%= s.id %>" class="btn btn-sm">Ver</a>
+            <% if (s.status === 'pendiente') { %>
+              <a href="/sesiones/<%= s.id %>/agendar" class="btn btn-sm">Agendar</a>
+              <a href="/sesiones/<%= s.id %>/realizar" class="btn btn-sm btn-primary">Realizar</a>
+              <form action="/sesiones/<%= s.id %>/cancelar" method="POST" style="display:inline">
+                <button type="submit" class="btn btn-sm btn-danger"
+                        onclick="return confirm('¿Cancelar esta sesión?')">Cancelar</button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

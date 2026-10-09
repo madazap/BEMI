@@ -1,0 +1,91 @@
+<div class="form-card" style="margin-bottom:16px">
+  <p style="margin:0"><strong>Paciente:</strong> <%= appointmentData.patient_name %></p>
+  <% if (appointmentData.treatment_name) { %>
+    <p style="margin:4px 0 0"><strong>Sesión:</strong> <%= appointmentData.is_control ? 'Control' : '#' + appointmentData.session_number %> — <%= appointmentData.treatment_name %></p>
+  <% } %>
+  <p style="margin:8px 0 0"><small>El paciente y la sesión de esta cita no se pueden cambiar aquí — se definen al agendar desde el plan de tratamiento.</small></p>
+</div>
+
+<form id="appointmentForm" action="/agenda/<%= appointmentData.id %>" method="POST" class="form-card" novalidate>
+
+  <div class="form-group">
+    <label for="professional_id">Profesional *</label>
+    <select id="professional_id" name="professional_id" required>
+      <option value="">— Selecciona un profesional —</option>
+      <% professionals.forEach(u => { %>
+        <option value="<%= u.id %>" <%= appointmentData.professional_id == u.id ? 'selected' : '' %>>
+          <%= u.name %>
+        </option>
+      <% }) %>
+    </select>
+  </div>
+
+  <input type="hidden" id="scheduled_at" name="scheduled_at">
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="pick_date">Fecha *</label>
+      <input type="date" id="pick_date" required>
+    </div>
+    <div class="form-group">
+      <label for="pick_time">Hora *</label>
+      <select id="pick_time" required></select>
+    </div>
+    <div class="form-group">
+      <label for="duration_minutes">Duración</label>
+      <select id="duration_minutes" name="duration_minutes">
+        <option value="30"  <%= (appointmentData.duration_minutes == 30)  ? 'selected' : '' %>>30 min</option>
+        <option value="60"  <%= (appointmentData.duration_minutes == 60) ? 'selected' : '' %>>1 hora</option>
+        <option value="90"  <%= (appointmentData.duration_minutes == 90)  ? 'selected' : '' %>>1 h 30 min</option>
+        <option value="120" <%= (appointmentData.duration_minutes == 120) ? 'selected' : '' %>>2 horas</option>
+        <option value="150" <%= (appointmentData.duration_minutes == 150) ? 'selected' : '' %>>2 h 30 min</option>
+        <option value="180" <%= (appointmentData.duration_minutes == 180) ? 'selected' : '' %>>3 horas</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="notes">Notas</label>
+    <textarea id="notes" name="notes" rows="3"><%= appointmentData.notes || '' %></textarea>
+  </div>
+
+  <div class="form-actions">
+    <a href="/agenda/<%= appointmentData.id %>" class="btn">Cancelar</a>
+    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+  </div>
+</form>
+
+<script>
+(function () {
+  const timeSelect = document.getElementById('pick_time');
+  const dateInput  = document.getElementById('pick_date');
+  const hidden     = document.getElementById('scheduled_at');
+  const form       = document.getElementById('appointmentForm');
+
+  for (let h = 6; h <= 21; h++) {
+    ['00', '30'].forEach(m => {
+      if (h === 21 && m === '30') return;
+      const label = `${String(h).padStart(2,'0')}:${m}`;
+      const opt   = document.createElement('option');
+      opt.value   = label;
+      opt.textContent = label;
+      timeSelect.appendChild(opt);
+    });
+  }
+
+  const existing = new Date('<%= new Date(appointmentData.scheduled_at).toISOString() %>');
+  dateInput.value = existing.toISOString().slice(0, 10);
+  const hh = String(existing.getHours()).padStart(2, '0');
+  const mm = existing.getMinutes() >= 30 ? '30' : '00';
+  timeSelect.value = `${hh}:${mm}`;
+
+  form.addEventListener('submit', function (e) {
+    if (!dateInput.value || !timeSelect.value) {
+      e.preventDefault();
+      alert('Seleccioná fecha y hora.');
+      return;
+    }
+    hidden.value = `${dateInput.value}T${timeSelect.value}`;
+  });
+})();
+</script>

@@ -1,0 +1,60 @@
+<form action="/pacientes/<%= patient ? patient.id : '' %>" method="POST" class="form-card form-wide" novalidate>
+  <div class="form-row">
+    <div class="form-group">
+      <label for="document_type">Tipo de Documento *</label>
+      <select id="document_type" name="document_type" required>
+        <% ['CC','CE','PP','NIT'].forEach(t => { %>
+          <option value="<%= t %>" <%= patient && patient.document_type === t ? 'selected' : '' %>><%= t %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="document_number">Número de Documento *</label>
+      <input type="text" id="document_number" name="document_number" required
+             value="<%= patient ? patient.document_number : '' %>" placeholder="Ej: 1234567890">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="full_name">Nombre Completo *</label>
+    <input type="text" id="full_name" name="full_name" required
+           value="<%= patient ? patient.full_name : '' %>" placeholder="Ej: María López">
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="birth_date">Fecha de Nacimiento</label>
+      <input type="date" id="birth_date" name="birth_date"
+             value="<%= patient && patient.birth_date ? patient.birth_date.toISOString().slice(0,10) : '' %>">
+    </div>
+    <div class="form-group">
+      <label for="phone">Teléfono</label>
+      <input type="text" id="phone" name="phone"
+             value="<%= patient ? (patient.phone || '') : '' %>" placeholder="Ej: 3001234567">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email"
+             value="<%= patient ? (patient.email || '') : '' %>" placeholder="paciente@ejemplo.com">
+    </div>
+    <div class="form-group">
+      <label for="address">Dirección</label>
+      <input type="text" id="address" name="address"
+             value="<%= patient ? (patient.address || '') : '' %>" placeholder="Ej: Cra 1 # 2-3">
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <% if (patient) { %>
+      <a href="/pacientes/<%= patient.id %>" class="btn">Cancelar</a>
+    <% } else { %>
+      <a href="/pacientes" class="btn">Cancelar</a>
+    <% } %>
+    <button type="submit" class="btn btn-primary">
+      <%= patient ? 'Guardar cambios' : 'Registrar Paciente' %>
+    </button>
+  </div>
+</form>
